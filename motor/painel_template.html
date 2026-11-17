@@ -1,0 +1,1369 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Monitoramento de Vendedores — Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js"></script>
+<script>
+/* tema antes de pintar a página, para não piscar: escolha salva ou o do sistema */
+(function(){var t=null;try{t=localStorage.getItem('mv_tema')}catch(e){}
+if(!/^(dark|blue|light)$/.test(t))t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';
+document.documentElement.setAttribute('data-theme',t)})();
+</script>
+<style>
+:root{color-scheme:light;
+  --bg:#eef1fb;--bgimg:linear-gradient(160deg,#e8eefb 0,#f3f1ff 60%,#eaf3fb 100%);--card:#fff;--cardbg:#fff;--card2:#f1f5fc;
+  --tx:#13233d;--mu:#667a96;--bd:#e0e7f3;--ac:#1a73d1;--acs:#e1eefc;--red:#d51f36;
+  --ok:#1f9d63;--okb:#e2f5ec;--no:#df3b4a;--nob:#fde7e9;--wa:#c98500;--wab:#fff3d9;--pu:#7c4dd8;--pub:#efe8fd;--gr:#94a0b2;
+  --c1:#2a78d6;--c2:#1baf7a;--hero:linear-gradient(150deg,#1f62c0 0,#123a7d 100%);
+  --top:#0d2447;--top2:#143562;--sh:0 1px 2px rgba(20,40,90,.05),0 14px 34px rgba(30,60,130,.09);--r:20px}
+:root[data-theme=blue]{
+  --bg:#a9bdd8;--bgimg:linear-gradient(160deg,#8fa8cb 0,#b5c7df 55%,#9db5d4 100%);--card:#f5f8fd;--cardbg:#f5f8fd;--card2:#e4ecf7;
+  --tx:#0f2440;--mu:#566d8d;--bd:rgba(15,60,120,.13);--ac:#1368c4;--acs:#d9e7f8;
+  --hero:linear-gradient(150deg,#16407f 0,#0a2350 100%);--sh:0 14px 34px rgba(10,35,80,.22)}
+:root[data-theme=dark]{color-scheme:dark;
+  --bg:#06162b;--bgimg:radial-gradient(1100px 520px at 12% -8%,#124377 0,transparent 62%),radial-gradient(900px 500px at 100% 0,#0c2f58 0,transparent 55%),linear-gradient(180deg,#071a33,#041225);
+  --card:#0d2748;--cardbg:linear-gradient(160deg,rgba(18,52,96,.82),rgba(9,30,58,.9));--card2:#123360;
+  --tx:#e8f1fb;--mu:#8fa9c8;--bd:rgba(120,170,230,.16);--ac:#3aa6ff;--acs:rgba(58,166,255,.16);
+  --ok:#35c486;--okb:rgba(53,196,134,.15);--no:#f0606c;--nob:rgba(240,96,108,.16);--wa:#e9ad3f;--wab:rgba(233,173,63,.16);--pu:#a383f0;--pub:rgba(163,131,240,.18);--gr:#6b7f99;
+  --c1:#4aa3ff;--c2:#35c486;--hero:linear-gradient(150deg,#1c63c0 0,#0c3a78 100%);
+  --top:#06101f;--top2:#0b1d36;--sh:0 12px 32px rgba(0,0,0,.35)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);background-image:var(--bgimg);background-attachment:fixed;color:var(--tx);font:14px/1.45 Inter,system-ui,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+
+/* ---------- topo ---------- */
+header{background:linear-gradient(120deg,var(--top),var(--top2));color:#fff;position:relative;z-index:1100}
+header::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(90deg,var(--red),var(--ac))}
+@media(min-width:900px){header{position:sticky;top:0;box-shadow:0 6px 18px rgba(0,0,0,.18)}}
+.hd{max-width:1520px;margin:auto;padding:14px 24px 16px;display:flex;flex-direction:column;gap:12px;transition:padding .2s}
+.r1{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.logo{background:#fff;border-radius:10px;padding:6px 10px;display:flex}.logo img{height:30px;display:block;transition:height .2s}
+.tt{flex:1;min-width:220px}.tt h1{margin:0;font-size:19px;font-weight:800;letter-spacing:-.01em}
+.tt p{margin:2px 0 0;color:#a9b6c8;font-size:12.5px;max-height:40px;overflow:hidden;transition:max-height .2s,opacity .2s,margin .2s}
+.acoes{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.r2{display:flex;gap:8px 10px;flex-wrap:wrap;align-items:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;padding:8px 10px;transition:opacity .15s}
+.r2 .grow{flex:1;min-width:160px}
+.sep{width:1px;align-self:stretch;background:rgba(255,255,255,.14);margin:2px 2px}
+.compact .hd{padding-top:8px;padding-bottom:10px;gap:8px}.compact .logo img{height:22px}.compact .tt p{max-height:0;opacity:0;margin:0}
+.seg{display:inline-flex;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:3px}
+.seg button{border:0;background:transparent;color:#c7d2e0;padding:5px 12px;border-radius:7px;cursor:pointer;font-weight:500;transition:background .15s,color .15s}
+.seg button.on{background:#fff;color:var(--top)}.seg button:hover:not(.on){color:#fff}
+.hd input,.hd select{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:#fff;border-radius:10px;padding:6px 10px;color-scheme:dark}
+.hd input:focus,.hd select:focus{outline:2px solid var(--ac);outline-offset:1px}
+.hd select option{color:#111}
+.hd input::placeholder{color:#93a2b6}
+.dt{display:flex;align-items:center;gap:6px;color:#93a2b6;font-size:12px}
+.btn,.ib{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:#fff;border-radius:10px;padding:6px 12px;cursor:pointer;transition:background .15s}
+.ib{width:36px;height:34px;padding:0;font-size:17px;line-height:1;display:grid;place-items:center}
+.btn:hover,.ib:hover{background:rgba(255,255,255,.16)}
+
+main{max-width:1520px;margin:auto;padding:18px 24px 48px;display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);min-width:0}
+.ch{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px 0;flex-wrap:wrap}
+.ch h2{margin:0;font-size:14px;font-weight:700}.ch small{color:var(--mu);font-size:12px}
+.cb{padding:12px 16px 16px}
+.empty{color:var(--mu);padding:6px 0}
+
+/* ---------- KPIs ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.kpi{padding:14px 16px;position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:0 3px 3px 0;background:var(--k,var(--ac))}
+.kpi span{color:var(--mu);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.kpi b{display:block;font-size:26px;font-weight:800;line-height:1.15;margin:4px 0 2px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.kpi em{font-style:normal;font-size:12px;color:var(--mu)}
+.kpi.g{--k:var(--ok)}.kpi.w{--k:var(--wa)}.kpi.r{--k:var(--no)}.kpi.p{--k:var(--pu)}
+
+/* ---------- visão mapa ---------- */
+.mapa{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;align-items:start}
+@media(max-width:1000px){.mapa{grid-template-columns:minmax(0,1fr)}}
+.side{display:flex;flex-direction:column;max-height:calc(100vh - 40px);position:sticky;top:16px}
+@media(max-width:1000px){.side{position:static;max-height:420px}}
+.side .ch select{border:1px solid var(--bd);background:var(--card2);border-radius:8px;padding:4px 8px;font-size:12px}
+.lista{overflow:auto;padding:10px 10px 12px;display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+.vc{border:1px solid var(--bd);border-radius:12px;padding:10px 12px;cursor:pointer;background:var(--card);transition:border-color .15s,box-shadow .15s,transform .15s}
+.vc:hover{border-color:var(--ac);transform:translateY(-1px)}
+.vc.sel{border-color:var(--ac);box-shadow:0 0 0 3px var(--acs)}
+.vn{display:flex;flex-direction:column;gap:1px;min-width:0}
+.vn b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vn small{color:var(--mu);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vs{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--mu);margin-top:4px;align-items:center}.vs strong{color:var(--tx);font-weight:700}
+.vs .cv{margin-left:auto;font-weight:700;font-size:13px}
+.pb{height:5px;background:var(--bd);border-radius:5px;overflow:hidden;margin-top:7px}.pb i{display:block;height:100%;border-radius:5px}
+.bd{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+.tag{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:600;line-height:19px;white-space:nowrap}
+.tag.no{background:var(--nob);color:var(--no)}.tag.wa{background:var(--wab);color:var(--wa)}.tag.ok{background:var(--okb);color:var(--ok)}.tag.pu{background:var(--pub);color:var(--pu)}.tag.mu{background:var(--card2);color:var(--mu)}
+
+.dir{display:grid;gap:16px;min-width:0}
+#map{height:520px;border-radius:0 0 var(--r) var(--r);background:var(--card2);z-index:0}
+.mapwrap{position:relative}
+.mapcab{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;flex-wrap:wrap;border-bottom:1px solid var(--bd)}
+.mapcab h2{margin:0;font-size:14px}.mapcab small{color:var(--mu)}
+.leg{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mu)}.leg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.pin{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;color:#fff;font:700 11px Inter,system-ui,sans-serif;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.pin.ped{background:var(--ok)}.pin.mcp{background:var(--wa)}.pin.nv{background:var(--no)}.pin.sr{background:var(--gr)}.pin.sv{background:var(--pu);border-radius:7px}
+.pin.longe{box-shadow:0 0 0 3px var(--no),0 2px 6px rgba(0,0,0,.35)}
+.cli{width:12px;height:12px;border-radius:3px;background:#fff;border:3px solid var(--tx);box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.leaflet-popup-content{font:13px/1.45 Inter,system-ui,sans-serif;margin:10px 14px}
+.leaflet-popup-content b{font-weight:700}
+/* reserva: OpenStreetMap com filtro azul, só se o mapa vetorial não carregar */
+.osm{filter:grayscale(1) sepia(.45) hue-rotate(170deg) saturate(2.6) brightness(.98) contrast(.95)}
+#map{background:#e8f0fa}
+:root[data-theme=dark] .osm{filter:grayscale(1) invert(1) sepia(.5) hue-rotate(170deg) saturate(2.2) brightness(.8) contrast(.95)}:root[data-theme=dark] #map{background:#0c1a2b}
+.semmapa{display:grid;place-items:center;height:100%;color:var(--mu);text-align:center;padding:20px}
+
+.g2{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px}@media(max-width:1200px){.g2{grid-template-columns:minmax(0,1fr)}}
+.dias{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.dias button{border:1px solid var(--bd);background:var(--card2);border-radius:99px;padding:3px 10px;font-size:12px;cursor:pointer}
+.dias button.on{background:var(--ac);border-color:var(--ac);color:#fff}
+.res{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-bottom:14px}
+.res div{background:var(--card2);border-radius:10px;padding:8px 10px}.res span{display:block;font-size:10.5px;color:var(--mu);text-transform:uppercase;letter-spacing:.05em;font-weight:600}.res b{font-size:16px;font-variant-numeric:tabular-nums}
+.tl{position:relative;display:grid;gap:2px;max-height:560px;overflow:auto;padding-right:4px}
+.it{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:start;padding:7px 8px;border-radius:10px;cursor:pointer}
+.it:hover{background:var(--card2)}.it.on{background:var(--acs)}
+.it .pin{width:24px;height:24px;font-size:10.5px;margin-top:1px}
+.it .ti{font-size:12px;color:var(--mu);font-variant-numeric:tabular-nums}.it .cn{font-weight:600;line-height:1.3}
+.it .rs{display:flex;gap:5px;flex-wrap:wrap;margin-top:3px;font-size:12px;color:var(--mu);align-items:center}
+.it .du{font-size:12px;color:var(--mu);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.sub{font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 6px}
+.rank{display:grid;grid-template-columns:minmax(120px,1.5fr) 2fr 72px;gap:10px;align-items:center;padding:5px 0}
+.rank div:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{height:9px;background:var(--bd);border-radius:6px;overflow:hidden}.bar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--no),#f08a93)}
+.pc{text-align:right;color:var(--mu);font-variant-numeric:tabular-nums;font-size:12px}
+
+/* ---------- visão tabela ---------- */
+.tw{overflow:auto;max-height:680px}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+th{font-weight:600;color:var(--mu);font-size:12px;text-align:right;padding:9px 8px;border-bottom:1px solid var(--bd);position:sticky;top:0;background:var(--card);cursor:pointer;white-space:nowrap;z-index:1}
+th:hover,th.hs{color:var(--ac)}th.l,td.l{text-align:left}
+td{padding:8px;border-bottom:1px solid var(--bd);text-align:right;white-space:nowrap}
+tbody tr{cursor:pointer}tbody tr:hover{background:var(--card2)}
+td.nm{max-width:260px;overflow:hidden;text-overflow:ellipsis;font-weight:500}td.mu{color:var(--mu)}
+.cvc{display:inline-flex;align-items:center;gap:6px}.cvc i{display:inline-block;width:46px;height:6px;background:var(--bd);border-radius:4px;overflow:hidden}.cvc i b{display:block;height:100%}
+.z{color:var(--mu)}
+.oculto{display:none!important}
+.pvm{width:14px;height:14px;border-radius:50%;border:3px solid var(--c1);background:var(--card);box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.leg .pvl{border-radius:50%;border:3px solid var(--c1);background:var(--card);box-sizing:border-box}
+.pin.pvp{background:var(--card);border:3px solid var(--c1);width:20px;height:20px;box-shadow:none}
+.tg{display:inline-flex;align-items:center;gap:5px;cursor:pointer;color:var(--tx);font-weight:600}.tg input{accent-color:var(--ac)}
+.go{margin-top:8px;border:1px solid var(--ac);background:var(--acs);color:var(--ac);border-radius:8px;padding:5px 10px;cursor:pointer;font-weight:600;font-size:12px}.go:hover{background:var(--ac);color:#fff}
+.boneco{position:relative;width:30px;height:40px;--c:var(--ok);filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+.boneco.no-cliente{--c:var(--ac)}
+.boneco .cab{position:absolute;left:0;top:0;width:30px;height:30px;border-radius:50%;background:var(--c);border:2.5px solid #fff;display:grid;place-items:center}
+.boneco .cab::after{content:"";position:absolute;left:50%;bottom:-7px;margin-left:-5px;border:5px solid transparent;border-top:7px solid #fff;border-bottom:0}
+.boneco svg{fill:#fff;display:block}
+.boneco .onda{position:absolute;left:0;top:0;width:30px;height:30px;border-radius:50%;border:2px solid var(--c);animation:onda 2s ease-out infinite}
+@keyframes onda{0%{transform:scale(1);opacity:.8}100%{transform:scale(2.1);opacity:0}}
+@media (prefers-reduced-motion:reduce){.boneco .onda{animation:none;opacity:0}}
+.agora-box{display:flex;gap:10px;align-items:flex-start;background:var(--okb);border:1px solid var(--ok);border-radius:10px;padding:10px 12px;margin:10px 0;cursor:pointer}
+.agora-box small{color:var(--mu);display:block;margin-top:3px}
+.agora-dot{width:10px;height:10px;border-radius:50%;background:var(--ok);margin-top:5px;flex:none;box-shadow:0 0 0 0 var(--ok);animation:pisca 1.6s infinite}
+@keyframes pisca{70%{box-shadow:0 0 0 8px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.cd{font-size:12px;color:var(--mu);margin-top:1px;word-break:break-word}.cd .cj{font-variant-numeric:tabular-nums;white-space:nowrap}
+.rsctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rsctl select{border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:8px;padding:6px 8px}
+.bt2{border:1px solid var(--bd);background:var(--card2);color:var(--tx);border-radius:8px;padding:6px 12px;cursor:pointer}.bt2p{background:var(--ac);border-color:var(--ac);color:#fff}.bt2p:hover{filter:brightness(1.1);color:#fff}
+.bt2:hover{border-color:var(--ac);color:var(--ac)}
+.rs .mesa{margin-top:18px}.rs h3{margin:0 0 6px;font-size:15px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;border-bottom:2px solid var(--ac);padding-bottom:4px}
+.rs h3 small{font-weight:400;color:var(--mu)}.rs h3 .tot{margin-left:auto;color:var(--ac);font-size:13px}
+.rs table th{cursor:default;position:static}.rs td.al{color:var(--red);font-weight:600}
+.rs .sb{margin:10px 0 2px;font-weight:600;color:var(--mu);font-size:12.5px}.rs ul{margin:2px 0 0;padding-left:18px}.rs li{margin:3px 0}
+.rs .ok li::marker{content:'★  ';color:var(--wa)}.rs .nada{color:var(--mu);font-style:italic}
+.rs .nota{margin-top:16px;color:var(--mu);font-size:12px}
+@media print{#kpis,#cComo,#vMapa,#vTabela,#vResumo,.psctl,.jsctl,.rsctl{display:none!important}.pstop{display:block!important}body{background:#fff}.rs .mesa{break-inside:avoid}.card{box-shadow:none}}
+.como{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:6px 22px;font-size:12.5px;color:var(--mu)}.como b{color:var(--tx)}
+@media(max-width:640px){.hd,main{padding-left:16px;padding-right:16px}.kpi b{font-size:22px}#map{height:400px}}
+
+/* ============ layout dashboard (3 temas) ============ */
+.card{background:var(--cardbg);border-radius:var(--r);border:1px solid var(--bd)}
+header{margin:14px 18px 0;border-radius:22px;background:linear-gradient(120deg,var(--top),var(--top2));box-shadow:0 14px 34px rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.07)}
+header::after{display:none}
+@media(min-width:900px){header{position:sticky;top:10px}}
+.hd{padding:12px 20px 14px}
+.nav{flex:1;display:flex;justify-content:center;min-width:240px}
+.tt{flex:0 1 auto;min-width:0}
+.seg{border-radius:99px;padding:3px}.seg button{border-radius:99px;padding:6px 16px}
+.seg button.on{background:var(--ac);color:#fff;box-shadow:0 4px 14px rgba(26,115,209,.5)}
+.r2{border-radius:16px}
+.dots{display:inline-flex;gap:7px;align-items:center}
+.dots button{width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.35);cursor:pointer;padding:0;transition:transform .15s}
+.dots button:hover{transform:scale(1.15)}
+.dots button.on{border-color:#fff;box-shadow:0 0 0 3px rgba(58,166,255,.55)}
+.dots [data-t=dark]{background:linear-gradient(135deg,#0c3a78,#041225)}
+.dots [data-t=blue]{background:linear-gradient(135deg,#9db5d4,#16407f)}
+.dots [data-t=light]{background:linear-gradient(135deg,#fff,#cfe0f7)}
+main{max-width:1680px;padding:18px 18px 48px}
+.kpis{gap:12px}.kpi{border-radius:18px}
+.mapa{grid-template-columns:300px minmax(0,1fr) 330px}
+.colL{display:grid;gap:16px;align-content:start;min-width:0}
+.g3{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:16px}
+@media(max-width:1500px){.mapa{grid-template-columns:300px minmax(0,1fr)}.side{grid-column:1/-1;position:static;max-height:520px}}
+@media(max-width:1000px){.mapa{grid-template-columns:minmax(0,1fr)}.g3{grid-template-columns:minmax(0,1fr)}.colL{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}}
+.hero{background:var(--hero);color:#fff;border:0;padding:18px 18px 14px;position:relative;overflow:hidden;box-shadow:0 18px 38px rgba(10,50,120,.35)}
+.hero::before{content:"";position:absolute;right:-60px;top:-60px;width:190px;height:190px;border-radius:50%;background:rgba(255,255,255,.08)}
+.hero .hl{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;position:relative}
+.hero span.k{font-size:12px;font-weight:600;opacity:.8;text-transform:uppercase;letter-spacing:.07em}
+.hero b.n{display:block;font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-top:4px;font-variant-numeric:tabular-nums}
+.hero em{font-style:normal;font-size:12.5px;opacity:.85}
+.hero .sp{margin:10px -6px 4px;position:relative}
+.hero .ft{display:flex;justify-content:space-between;gap:8px;font-size:12px;opacity:.9;border-top:1px solid rgba(255,255,255,.16);padding-top:9px;margin-top:6px;position:relative}
+.hero .ft b{font-weight:700}
+.rg0{fill:none;stroke:rgba(255,255,255,.2);stroke-width:6}.rg1{fill:none;stroke:#fff;stroke-width:6;stroke-linecap:round}.rt{fill:#fff;font:700 13px Inter,sans-serif}
+.mt{display:grid;gap:13px}
+.mt .lb{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px}.mt .lb span{color:var(--mu)}.mt .lb b{font-variant-numeric:tabular-nums}
+.mt .tr{height:8px;border-radius:99px;background:var(--card2);overflow:hidden}.mt .tr i{display:block;height:100%;border-radius:99px;min-width:3px}
+.ps{display:grid;gap:7px}
+.ps button{display:grid;grid-template-columns:1fr 34px;gap:3px 8px;align-items:center;text-align:left;background:transparent;border:0;border-radius:10px;padding:5px 6px;cursor:pointer}
+.ps button:hover,.ps button.on{background:var(--acs)}
+.ps .nm{grid-column:1/-1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px}
+.ps .tr{height:8px;border-radius:99px;background:var(--card2);overflow:hidden}.ps .tr i{display:block;height:100%;border-radius:99px;background:var(--c1)}
+.ps .vl{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;font-size:12.5px}
+.ro{display:grid;grid-template-columns:auto 1fr;gap:14px 18px;align-items:center;justify-items:center}
+.ro svg{overflow:visible}
+.ro .seg0{cursor:pointer;transition:opacity .15s}.ro:hover .seg0{opacity:.55}.ro .seg0:hover{opacity:1}
+.rl{display:grid;gap:9px;width:100%;font-size:12.5px}
+.rl div{display:grid;grid-template-columns:12px 1fr auto;gap:8px;align-items:center}
+.rl i{width:10px;height:10px;border-radius:3px}.rl b{font-variant-numeric:tabular-nums}.rl small{color:var(--mu);margin-left:4px}
+.rc,.rc2{pointer-events:none}
+.rc{fill:var(--tx);font:800 24px Inter,sans-serif}.rc2{fill:var(--mu);font:500 11px Inter,sans-serif}
+.lw{width:100%;min-height:150px}
+.lw svg{display:block;width:100%;overflow:visible}
+.gr{stroke:var(--bd);stroke-width:1}.ax{fill:var(--mu);font:500 11px Inter,sans-serif}.lbv{fill:var(--tx);font:700 11.5px Inter,sans-serif}
+.chv{stroke:var(--mu);stroke-width:1;stroke-dasharray:3 3}
+.band{fill:var(--acs)}
+#trleg span{display:inline-flex;align-items:center;gap:6px}#trleg i{width:16px;height:3px;border-radius:2px;display:inline-block}
+.trn{font-size:11.5px;color:var(--mu);margin-top:6px}
+#tip{position:fixed;display:none;z-index:3000;pointer-events:none;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:10px;padding:8px 11px;font-size:12.5px;box-shadow:0 10px 28px rgba(0,0,0,.3);max-width:260px}
+#tip b{font-variant-numeric:tabular-nums}#tip .tr2{display:flex;align-items:center;gap:7px;margin-top:3px}#tip .tr2 i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.vc{border-radius:14px}
+#map{border-radius:0 0 var(--r) var(--r)}
+
+/* ---- faixa de indicadores (cartões com ícone e barra) ---- */
+.kpis{grid-template-columns:repeat(9,minmax(0,1fr));gap:12px}
+@media(max-width:1600px){.kpis{grid-template-columns:repeat(5,minmax(0,1fr))}.kpis .kpi:last-child{grid-column:span 2}}
+@media(max-width:1000px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.kpis .kpi:last-child{grid-column:auto}}
+@media(max-width:640px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpis .kpi:last-child{grid-column:span 2}}
+@media(max-width:1750px){.kpi b{font-size:24px}.kpi{padding:13px 13px}}
+.kpi{padding:14px 16px 14px;border-radius:20px;display:flex;flex-direction:column;gap:2px;--k:var(--ac);transition:transform .15s,box-shadow .15s}
+.kpi:hover{transform:translateY(-2px)}
+.kpi::before{display:none}
+.kh{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+.kpi .ic{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;flex:none;color:var(--k);background:color-mix(in srgb,var(--k) 16%,transparent)}
+.kpi .kl{font-size:12px;font-weight:600;color:var(--mu);text-transform:none;letter-spacing:0;line-height:1.2}
+.kpi{container-type:inline-size}
+.kpi b{font-size:28px;margin:2px 0 0;white-space:nowrap}.kpi b.lg{font-size:min(28px,12.5cqw)}
+.kpi em{display:block;min-height:2.6em;line-height:1.3}
+.kb{height:5px;border-radius:99px;background:var(--card2);overflow:hidden;margin-top:8px}.kb i{display:block;height:100%;border-radius:99px;background:var(--k)}
+.kb0{background:transparent}
+
+.dt2{display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12.5px}.dt2 input,.psctl select{border:1px solid var(--bd);background:var(--card2);color:var(--tx);border-radius:8px;padding:6px 8px}
+.pos .kpis4{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:14px}
+.pos .kpi{background:var(--card2);border:1px solid var(--bd);border-radius:14px;padding:12px 14px;box-shadow:none}.pos .kpi:hover{transform:none}
+.pos table th{cursor:default;position:static}.pos td.pcc{white-space:nowrap}
+.pbx{display:inline-block;width:70px;height:7px;border-radius:99px;background:var(--bd);overflow:hidden;vertical-align:middle;margin-right:8px}.pbx i{display:block;height:100%;border-radius:99px}
+.pos tr.gh td{background:var(--acs);font-weight:700;color:var(--ac);text-align:left}.pos tr.st td{font-weight:700;background:var(--card2)}.pos tr.tgeral td{font-weight:800}
+.pos .nota{margin-top:14px;color:var(--mu);font-size:12px}
+.pstop{display:none;margin-bottom:12px;font-size:15px}.pstop span{color:var(--mu);font-size:12.5px}
+.pos tr.tgeral td{background:var(--acs)}
+@page{size:A4 portrait;margin:0}
+@media print{
+  :root[data-theme]{--bg:#fff;--bgimg:none;--card:#fff;--cardbg:#fff;--card2:#f1f5fc;--tx:#13233d;--mu:#667a96;--bd:#e0e7f3;--ac:#1a73d1;--acs:#e1eefc;--ok:#1f9d63;--no:#df3b4a;--wa:#c98500;--gr:#94a0b2;--sh:none}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{background:#fff!important;background-image:none!important;font-size:12px;padding:9mm 9mm 8mm}
+  header{position:static!important;margin:0 0 12px!important;box-shadow:none!important;border-radius:16px}
+  header .nav,header .acoes,header #filtros,header #sub{display:none!important}
+  header .hd{padding:10px 16px}header .tt h1{font-size:18px}
+  main{padding:0;max-width:none}
+  #vPos .ch,#vJust .ch{display:none}.card{border:0}#vPos .cb{padding:0}
+  .pos .kpi{break-inside:avoid;padding:9px 12px}.pos .kpi b{font-size:21px}.pos tr{break-inside:avoid}.pos .tw{max-height:none;overflow:visible}
+  .pos table{font-size:10.5px;width:100%}.pos td,.pos th{padding:4px 4px}.pos td.l{white-space:normal;min-width:120px}.pos th{white-space:normal;line-height:1.15}.pos .pstop,.pos .tw{max-width:100%}.pbx{width:34px;margin-right:4px}.pos .kpis4{grid-template-columns:repeat(4,1fr);gap:8px}.pos .kpi b{font-size:19px}.pos .kpi em{font-size:10.5px}
+}
+.bt2p,.bt2p:hover{background:var(--ac);border-color:var(--ac);color:#fff}.bt2p:hover{filter:brightness(1.12)}
+
+/* ---- menu em sanfona: Relatórios abre Resumo, Positivação e Sem justificativa ---- */
+.gbtn{display:inline-flex;align-items:center;gap:6px}
+.gbtn svg{transition:transform .3s}
+.gbtn[aria-expanded=true] svg{transform:rotate(180deg)}
+.gbtn.on{color:#fff;box-shadow:inset 0 -2px 0 var(--ac)}
+.grp{display:grid;grid-template-columns:0fr;opacity:0;transition:grid-template-columns .35s ease,opacity .3s ease}
+.grp.open{grid-template-columns:1fr;opacity:1}
+.grpin{display:flex;overflow:hidden;min-width:0;white-space:nowrap}
+.grp:not(.open) .grpin{visibility:hidden;transition:visibility 0s .35s}
+@media (prefers-reduced-motion:reduce){.grp,.gbtn svg{transition:none}}
+@media(max-width:700px){.seg{flex-wrap:wrap;justify-content:center;border-radius:18px}.grp{grid-template-columns:1fr;display:none}.grp.open{display:grid}}
+
+.rsctl .seg{background:var(--card2);border:1px solid var(--bd)}.rsctl .seg button{color:var(--mu)}.rsctl .seg button.on{background:var(--ac);color:#fff;box-shadow:none}.rsctl .seg button:hover:not(.on){color:var(--tx)}
+#vend{max-width:230px}
+
+#map3d{display:none;height:520px;border-radius:0 0 var(--r) var(--r);background:var(--card2);z-index:0}
+.mapwrap.m3 #map{display:none}.mapwrap.m3 #map3d{display:block}
+.mapwrap.m3 #b3d{background:var(--ac);border-color:var(--ac);color:#fff}
+.maplibregl-popup-content{font:12.5px/1.4 Inter,system-ui,sans-serif;color:#13233d}
+@media(max-width:640px){#map3d{height:400px}}
+
+.pin.pot{background:#0ea5a4;border-radius:50%;width:14px;height:14px;border:2px solid #fff;margin-top:5px}.pot3{width:13px;height:13px;border-radius:50%;background:#0ea5a4;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.potres{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.potbtn{margin:2px 0 8px}
+
+.potsup{margin:16px 0 4px;font-size:14px}.potsup small{color:var(--mu);font-weight:500}
+.potv{border:1px solid var(--bd);border-radius:12px;margin:6px 0;background:var(--card2)}.potv summary{padding:9px 12px;cursor:pointer;font-size:13px}.potv summary small{color:var(--mu)}
+.potv .tw{max-height:360px;overflow:auto;padding:0 8px 8px}.potv a{color:var(--ac);text-decoration:none;white-space:nowrap}
+#potq{background:var(--card2);border:1px solid var(--bd);border-radius:10px;padding:7px 10px;color:var(--tx);font:inherit}
+.mapcab .mtog{flex-basis:100%;gap:18px;padding-top:2px}
+.mapcab>.leg{flex-basis:100%}
+</style>
+</head>
+<body>
+<header id="top"><div class="hd">
+  <div class="r1">
+    <div class="logo"><svg viewBox="0 0 120 32" width="120" height="32" role="img" aria-label="Demo"><rect width="32" height="32" rx="9" fill="#2f6bff"/><path d="M8 21l5-6 4 4 7-9" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><text x="40" y="22" font-family="Segoe UI,Arial" font-size="15" font-weight="700" fill="#0b2a5c">Demo</text></svg></div>
+    <div class="tt"><h1>Monitoramento de vendedores</h1><p id="sub"></p></div>
+    <nav class="nav"><div class="seg" id="vis"><button data-v="mapa">Mapa</button><button data-v="tabela">Tabela</button>
+      <button class="gbtn" data-g="rel" aria-expanded="false" aria-controls="grp">Relatórios <svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <span class="grp" id="grp"><span class="grpin"><button data-v="resumo">Resumo</button><button data-v="pos">Positivação</button><button data-v="just">Sem justificativa</button><button data-v="pot" id="btnpot" hidden>Potenciais</button></span></span>
+    </div></nav>
+    <div class="acoes">
+      <div class="dots" id="temas" role="group" aria-label="Tema"><button data-t="dark" title="Noite" aria-label="Tema noite"></button><button data-t="blue" title="Azul" aria-label="Tema azul"></button><button data-t="light" title="Claro" aria-label="Tema claro"></button></div>
+      <button class="btn" id="csv" title="Baixar a tabela em CSV">⬇ CSV</button>
+    </div>
+  </div>
+  <div class="r2" id="filtros">
+    <div class="seg" id="atalhos"><button data-a="dia">Último dia</button><button data-a="7">7 dias</button><button data-a="mes">Mês</button><button data-a="tudo">Tudo</button></div>
+    <span class="sep"></span>
+    <label class="dt">De <input type="date" id="de"></label>
+    <label class="dt">Até <input type="date" id="ate"></label>
+    <span class="sep"></span>
+    <select id="sup" title="Supervisor"></select>
+    <select id="vend" title="Vendedor"></select>
+    <input id="q" class="grow" placeholder="Buscar vendedor…" size="15">
+  </div>
+</div></header>
+
+<main>
+  <div class="kpis" id="kpis"></div>
+
+  <section id="vMapa" class="mapa">
+    <aside class="colL">
+      <div class="card hero" id="hero"></div>
+      <div class="card"><div class="ch"><h2>Rota do período</h2><small id="metasub"></small></div><div class="cb" id="metas"></div></div>
+      <div class="card"><div class="ch"><h2>Por supervisor</h2><small>positivados · clique para filtrar</small></div><div class="cb" id="porsup"></div></div>
+    </aside>
+    <div class="dir">
+      <div class="g3">
+        <div class="card"><div class="ch"><h2>Resultado das visitas</h2><small id="rosub"></small></div><div class="cb" id="rosca"></div></div>
+        <div class="card"><div class="ch"><h2>Evolução diária <small>dias úteis</small></h2><div class="leg" id="trleg"></div></div><div class="cb" id="tend"></div></div>
+      </div>
+      <div class="card mapwrap">
+        <div class="mapcab"><div><h2 id="mtit">Mapa das visitas</h2><small id="msub"></small></div><button class="bt2" id="b3d" title="Mapa com prédios em 3D e câmera inclinada">Mapa 3D</button>
+          <div class="leg"><span><i style="background:var(--ok)"></i>Pedido na visita</span><span><i style="background:var(--no)"></i>Não venda</span><span><i style="background:var(--wa)"></i>Motivo, mas comprou</span><span><i style="background:var(--pu);border-radius:3px"></i>Pedido sem visita</span><span><i style="background:transparent;box-shadow:0 0 0 2px var(--no)"></i>Entrada longe</span><span><i style="background:#fff;border:3px solid var(--tx);border-radius:3px;box-sizing:border-box"></i>Endereço do cliente (cadastro)</span><span><i class="pvl"></i>Previsto na rota, sem visita</span><span id="legpot" hidden><i style="background:#0ea5a4"></i>Potencial (ainda não é cliente)</span></div><div class="leg mtog"><label class="tg"><input type="checkbox" id="tprev" checked> mostrar previstos</label><label class="tg" id="tpotw" hidden><input type="checkbox" id="tpot"> mostrar potenciais</label></div></div>
+        <div id="map"></div><div id="map3d"></div>
+      </div>
+      <div class="g2">
+        <div class="card"><div class="ch"><h2 id="rtit">Roteiro do dia</h2><small id="rsub"></small></div><div class="cb" id="rot"></div></div>
+        <div class="card"><div class="ch"><h2>Motivos de não compra</h2><small id="motsub"></small></div><div class="cb" id="mot"></div></div>
+      </div>
+    
+    </div>
+    <div class="card side">
+      <div class="ch"><h2>Vendedores <small id="lsub"></small></h2>
+        <select id="ord" title="Ordenar">
+          <option value="rota">Número da rota</option><option value="alerta">Mais alertas</option><option value="conv">Menor conversão</option>
+          <option value="cli">Mais visitas</option><option value="val">Maior valor</option><option value="nome">Nome</option>
+        </select></div>
+      <div class="lista" id="lista"></div>
+    </div>
+    </section>
+
+  <section id="vTabela" class="oculto">
+    <div class="card"><div class="ch"><h2>Vendedores</h2><small id="tsub"></small></div><div class="cb tw" id="tab"></div></div>
+  </section>
+
+  <section id="vResumo" class="oculto">
+    <div class="card"><div class="ch"><h2>Resumo</h2>
+      <div class="rsctl"><div class="seg" id="rmodo"><button data-m="semana">Semana</button><button data-m="dia">Dia</button></div><select id="rsem" title="Período"></select>
+        <button class="bt2" id="rcopia">Copiar texto</button><button class="bt2" id="rpdf">Imprimir / salvar PDF</button></div></div>
+      <div class="cb" id="rsbody"></div></div>
+  </section>
+
+  <section id="vPos" class="oculto">
+    <div class="card"><div class="ch"><h2>Positivação do dia</h2>
+      <div class="rsctl psctl"><label class="dt2">Dia <input type="date" id="pdia"></label>
+        <select id="psup" title="Supervisor"></select><select id="pvend" title="Vendedor"></select>
+        <button class="bt2 bt2p" id="ppdfl" title="Baixa o arquivo em A4 paisagem">⬇ Baixar PDF (paisagem)</button><button class="bt2" id="ppdf">Imprimir</button></div></div>
+      <div class="cb" id="posbody"></div></div>
+  </section>
+
+  <section id="vJust" class="oculto">
+    <div class="card"><div class="ch"><h2>Clientes sem venda e sem justificativa</h2>
+      <div class="rsctl jsctl"><label class="dt2">Dia <input type="date" id="jdia"></label>
+        <select id="jsup" title="Supervisor"></select><select id="jvend" title="Vendedor"></select>
+        <button class="bt2 bt2p" id="jpdf" title="Baixa o arquivo em A4 paisagem">⬇ Baixar PDF (paisagem)</button>
+        <button class="bt2" id="jpdfs" title="Baixa um arquivo para cada supervisor">⬇ Um PDF por supervisor</button><button class="bt2" id="jimp">Imprimir</button></div></div>
+      <div class="cb" id="justbody"></div></div>
+  </section>
+
+  <section id="vPot" class="oculto">
+    <div class="card"><div class="ch"><h2>Clientes em potencial</h2>
+      <div class="rsctl jsctl"><select id="potsup" title="Supervisor"></select><select id="potvend" title="Vendedor"></select><select id="pottipo" title="Tipo"></select>
+        <input type="search" id="potq" placeholder="Buscar estabelecimento..." style="min-width:170px">
+        <button class="bt2 bt2p" id="potexp" title="Baixa o que está na tela, por mesa e vendedor">⬇ Exportar (CSV)</button></div></div>
+      <div class="cb" id="potbody"></div></div>
+  </section>
+
+  <div class="card" id="cComo"><div class="ch"><h2>Como ler</h2></div><div class="cb como" id="como"></div></div>
+</main>
+
+<script>
+const D=__DADOS__;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const n0=x=>Number(x||0).toLocaleString('pt-BR');
+const brl=x=>Number(x||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+const pct=(a,b)=>b?a/b*100:null, fp=p=>p==null?'—':p.toFixed(0)+'%';
+const fdt=s=>s.slice(8)+'/'+s.slice(5,7);
+const fdl=s=>new Date(s+'T12:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
+const fmin=m=>m?`${Math.floor(m/60)}h${String(Math.round(m%60)).padStart(2,'0')}`:'—';
+const fdur=s=>s<0?'—':s<60?s+'s':Math.floor(s/60)+' min';
+const fdist=d=>d<0?'sem GPS':d>=1000?(d/1000).toFixed(1)+' km':d+' m';
+const toMin=h=>h?(+h.slice(0,2))*60+(+h.slice(3)):null;
+const deMin=m=>m==null?'—':String(Math.floor(m/60)).padStart(2,'0')+':'+String(Math.round(m%60)).padStart(2,'0');
+const curto=s=>{const p=String(s||'').split(/\s+/).filter(Boolean);return p.length>2?p[0]+' '+p[p.length-1]:p.join(' ')};
+const corCv=c=>c==null?'var(--gr)':c>=50?'var(--ok)':c<30?'var(--no)':'var(--wa)';
+const R=D.regras,VEND=D.vendedores,CLI=D.clientes,MOT=D.motivos;
+const cli=p=>CLI[p]||['',null,null,'',''];
+/* linha de identificação do cliente: código · razão social · CNPJ */
+const cliId=p=>{const c=cli(p);return `<div class="cd"><span>Cód. ${p}</span>${c[3]?` · ${esc(c[3])}`:''}${c[4]?` · <span class="cj">${esc(c[4])}</span>`:''}</div>`};
+const vnome=v=>(VEND[v]||{}).nome||'(sem cadastro)';
+// visita: [pdv, entrada, saida, dur_seg, cod_motivo, pedido_na_visita, dist_m, tem_pedido_no_dia, lat, lon]
+const st=v=>v[5]?'ped':(v[4]&&v[7])?'mcp':v[4]?'nv':'sr';
+const STL={ped:'Pedido na visita',mcp:'Motivo, mas comprou',nv:'Não venda',sr:'Sem registro'};
+const datas=[...new Set(D.registros.map(r=>r.d))].sort();
+const ult=datas[datas.length-1]||D.fim;
+let vis0='mapa';try{vis0=localStorage.getItem('mv_vis')||'mapa'}catch(e){}
+const POT=D.potenciais||null;
+const S={pot:false,de:ult,ate:ult,sup:'',vend:'',q:'',sem:0,prevmapa:true,vis:vis0,ord:'rota',tord:'sup',tdir:1,sel:null,dia:null};
+
+/* ---------- agregação ---------- */
+function filtrados(){
+  const q=S.q.trim().toLowerCase();
+  return D.registros.filter(r=>r.d>=S.de&&r.d<=S.ate).filter(r=>{
+    const v=VEND[r.v]||{nome:'',sup:''};
+    if(S.sup&&v.sup!==S.sup)return false;
+    if(S.vend&&String(r.v)!==String(S.vend))return false;
+    if(q&&!(String(r.v).includes(q)||v.nome.toLowerCase().includes(q)))return false;
+    return true});
+}
+function somar(regs){
+  const t={prev:0,pend:0,fora:0,vis:0,cli:0,pos:0,posv:0,semv:0,nvp:0,rel:0,longe:0,semgps:0,ped:0,val:0,tcli:0,jor:0,dias:0,ini:[],fim:[],mot:{}};
+  for(const r of regs){const m=r.m;
+    for(const k of ['prev','pend','fora','vis','cli','pos','posv','semv','nvp','rel','longe','semgps','ped','val','tcli','jor'])t[k]+=m[k]||0;
+    if(m.vis){t.dias++;t.ini.push(toMin(m.ini));t.fim.push(toMin(m.fim))}
+    for(const [c,n] of Object.entries(m.mot))t.mot[c]=(t.mot[c]||0)+n}
+  const med=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  t.iniM=med(t.ini);t.fimM=med(t.fim);t.jorM=t.dias?t.jor/t.dias:0;
+  t.conv=pct(t.posv,t.cli);t.relP=pct(t.rel,t.vis);t.semvP=pct(t.semv,t.pos);t.mediaVis=t.vis?t.tcli/t.vis:0;
+  t.alerta=t.longe*2+t.rel+t.semv+t.nvp;
+  return t;
+}
+function porVendedor(regs){
+  const g={};for(const r of regs)(g[r.v]=g[r.v]||[]).push(r);
+  return Object.entries(g).map(([v,rs])=>{const c=VEND[v]||{nome:'(sem cadastro)',sup:'—'};return {cod:+v,nome:c.nome,sup:c.sup,...somar(rs)}});
+}
+
+/* ---------- topo e KPIs ---------- */
+function atalhoAtual(){
+  if(S.de===ult&&S.ate===ult)return 'dia';
+  if(S.ate===ult&&S.de===datas.at(-7))return '7';
+  if(S.ate===ult&&S.de===ult.slice(0,8)+'01')return 'mes';
+  if(S.de===D.inicio&&S.ate===D.fim)return 'tudo';return '';
+}
+function topo(){
+  $('sub').textContent=`Visitas GPS × pedidos · ${S.de===S.ate?fdl(S.de):fdt(S.de)+' a '+fdt(S.ate)} · atualizado em ${D.gerado}`;
+  document.querySelectorAll('#atalhos button').forEach(b=>b.classList.toggle('on',b.dataset.a===atalhoAtual()));
+  document.querySelectorAll('#vis button[data-v]').forEach(b=>b.classList.toggle('on',b.dataset.v===S.vis));
+  const emGrupo=['resumo','pos','just','pot'].includes(S.vis);
+  if(emGrupo)S.relAberto=true;
+  $('grp').classList.toggle('open',!!S.relAberto);
+  const gb=document.querySelector('#vis .gbtn');gb.classList.toggle('on',emGrupo);gb.setAttribute('aria-expanded',!!S.relAberto);
+  opcoesVend();
+  $('de').value=S.de;$('ate').value=S.ate;
+  $('vMapa').classList.toggle('oculto',S.vis!=='mapa');$('vTabela').classList.toggle('oculto',S.vis!=='tabela');$('vResumo').classList.toggle('oculto',S.vis!=='resumo');$('vPos').classList.toggle('oculto',S.vis!=='pos');$('vJust').classList.toggle('oculto',S.vis!=='just');$('vPot').classList.toggle('oculto',S.vis!=='pot');const so=S.vis==='resumo'||S.vis==='pos'||S.vis==='just'||S.vis==='pot';$('kpis').classList.toggle('oculto',so);$('filtros').classList.toggle('oculto',so);$('csv').classList.toggle('oculto',so);
+  document.querySelectorAll('#temas button').forEach(b=>b.classList.toggle('on',b.dataset.t===document.documentElement.dataset.theme));
+}
+/* ícones (traço fino, 24x24) */
+const IC={
+  users:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  rota:'<path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
+  ok:'<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/>',
+  pct:'<line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',
+  bag:'<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  alerta:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
+  raio:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+  nav:'<polygon points="3 11 22 2 13 21 11 13 3 11"/>',
+  cifra:'<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'
+};
+function kpis(t,nv){
+  const c=t.conv,cob=t.prev?(t.prev-t.pend)/t.prev*100:null;
+  // [rótulo, valor, texto de baixo, cor, ícone, % da barrinha (ou null), o que a barra mede]
+  const it=[
+    ['Clientes visitados',n0(t.cli),`${n0(t.vis)} visitas · ${nv} vendedores`,'','users',t.prev?t.cli/t.prev*100:null,'visitados ÷ previstos'],
+    ['Previstos na rota',n0(t.prev),`${n0(t.pend)} pendentes · ${n0(t.fora)} fora da rota`,t.pend&&t.prev&&t.pend/t.prev>=.5?'w':'','rota',cob,'rota já visitada'],
+    ['Positivados',n0(t.pos),`${n0(t.posv)} com visita no dia`,'g','ok',t.prev?t.pos/t.prev*100:null,'positivados ÷ previstos'],
+    ['Conversão da visita',fp(c),'visitados que compraram',c==null?'':c>=50?'g':c<30?'r':'w','pct',c,'conversão'],
+    ['Pedido sem visita',n0(t.semv),`${fp(t.semvP)} dos positivados`,'p','bag',t.semvP,'dos positivados'],
+    ['Não venda c/ pedido',n0(t.nvp),'visita com motivo, mas comprou',t.nvp?'w':'','alerta',null,''],
+    ['Visitas relâmpago',n0(t.rel),`${fp(t.relP)} das visitas · < ${R.relampago_seg/60} min`,t.relP>=25?'r':t.rel?'w':'','raio',t.relP,'das visitas'],
+    ['Entrada longe',n0(t.longe),`> ${R.longe_m} m do cliente · ${n0(t.semgps)} sem GPS`,t.longe?'r':'','nav',t.vis?t.longe/t.vis*100:null,'das visitas'],
+    ['Valor em pedidos',brl(t.val),`${n0(t.ped)} pedidos`,'g','cifra',null,'']
+  ];
+  $('kpis').innerHTML=it.map(([l,v,e,k,ic,pc,tp])=>`<div class="card kpi ${k}">
+    <div class="kh"><span class="ic"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[ic]}</svg></span><span class="kl">${l}</span></div>
+    <b${String(v).length>8?' class="lg"':''}>${v}</b><em>${e}</em>
+    ${pc!=null?`<div class="kb" title="${tp}: ${fp(pc)}"><i style="width:${Math.max(2,Math.min(100,pc))}%"></i></div>`:'<div class="kb kb0"></div>'}</div>`).join('');
+}
+
+/* ---------- lista lateral ---------- */
+function lista(rows){
+  const o=S.ord;
+  rows.sort((a,b)=>o==='rota'?a.cod-b.cod:o==='alerta'?b.alerta-a.alerta||b.cli-a.cli:o==='conv'?(a.conv??999)-(b.conv??999):o==='cli'?b.cli-a.cli:o==='val'?b.val-a.val:a.nome.localeCompare(b.nome));
+  $('lsub').textContent=`· ${rows.length}`;
+  $('lista').innerHTML=rows.length?rows.map(r=>{
+    const b=[];
+    if(r.longe)b.push(`<span class="tag no">📍 ${r.longe} longe</span>`);
+    if(r.rel)b.push(`<span class="tag ${r.relP>=25?'no':'wa'}">⚡ ${r.rel} relâmpago</span>`);
+    if(r.semv)b.push(`<span class="tag pu">${r.semv} sem visita</span>`);
+    if(r.nvp)b.push(`<span class="tag wa">${r.nvp} motivo c/ pedido</span>`);
+    return `<div class="vc ${S.sel===r.cod?'sel':''}" data-v="${r.cod}">
+      <div class="vn"><b title="${esc(r.nome)}">${r.cod} · ${esc(r.nome)}</b><small>${esc(supRot(r.sup))}</small></div>
+      <div class="vs"><span><strong>${n0(r.cli)}</strong>${r.prev?'/'+n0(r.prev):''} visitados</span><span><strong>${n0(r.pos)}</strong> positivados</span><span class="cv" style="color:${corCv(r.conv)}">${fp(r.conv)}</span></div>
+      <div class="pb"><i style="width:${Math.min(r.conv||0,100)}%;background:${corCv(r.conv)}"></i></div>
+      ${b.length?`<div class="bd">${b.join('')}</div>`:''}</div>`}).join(''):'<p class="empty">Nenhum vendedor no filtro.</p>';
+}
+
+/* ---------- última posição conhecida (só vale para o dia de hoje) ----------
+   O banco não tem GPS ao vivo: a melhor pista é a última entrada. Entrada sem saída = ainda está no cliente. */
+function posAtual(r){
+  const hoje=D.gerado.slice(6,10)+'-'+D.gerado.slice(3,5)+'-'+D.gerado.slice(0,2);
+  if(!r||r.d!==hoje||!r.vis.length)return null;
+  const i=r.vis.length-1,v=r.vis[i],aberta=!v[2],ref=aberta?v[1]:v[2];
+  const [h,m]=ref.split(':').map(Number);
+  return {i,v,c:cli(v[0]),aberta,ref,min:Math.max(0,Math.round((Date.now()-new Date().setHours(h,m,0,0))/60000))};
+}
+
+/* ---------- onde o vendedor está (só no dia de hoje) ----------
+   Marcador pequeno em cima da última entrada conhecida: verde = já saiu do cliente, azul = ainda no cliente. */
+const iconeBoneco=aberta=>L.divIcon({className:'',iconSize:[30,40],iconAnchor:[15,54],
+  html:`<div class="boneco${aberta?' no-cliente':''}"><span class="onda"></span><span class="cab"><svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="8" r="4.3"/><path d="M3.6 21.5c0-5 3.7-8 8.4-8s8.4 3 8.4 8z"/></svg></span></div>`});
+function colocaBoneco(rec){
+  const pa=posAtual(rec);if(!pa||pa.v[8]==null)return;
+  L.marker([pa.v[8],pa.v[9]],{icon:iconeBoneco(pa.aberta),zIndexOffset:2000})
+    .bindPopup(`<b>${esc(vnome(S.sel))}</b><br>${pa.aberta?'No cliente agora':'Última posição conhecida'}<br>${esc(pa.c[0]||'Cliente '+pa.v[0])}<br>${pa.aberta?'entrada':'saída'} às ${pa.ref} · há ${fmin(pa.min)}`)
+    .bindTooltip(esc(vnome(S.sel)),{direction:'top',offset:[0,-50]}).addTo(CAMADA);
+}
+
+/* ---------- ir da entrada ao endereço do cliente (e voltar) ---------- */
+const CLI_ICONE=()=>L.divIcon({className:'',html:'<div class="cli"></div>',iconSize:[12,12],iconAnchor:[6,6]});
+function marcaCliente(i,v){
+  const c=cli(v[0]);
+  const m=L.marker([c[1],c[2]],{icon:CLI_ICONE()}).bindPopup(`<b>${esc(c[0]||'Cliente '+v[0])}</b><br>Endereço do cadastro do cliente<br>a ${fdist(v[6])} da entrada nº ${i+1}<br>
+    <button class="go go-chk" data-i="${i}">← Ver onde fez a entrada</button>`).addTo(CAMADA);
+  CLIMARC[i]=m;return m;
+}
+function vaiCliente(i){
+  const v=RECATUAL&&RECATUAL.vis[i];if(!v)return;const c=cli(v[0]);if(c[1]==null||v[8]==null)return;
+  let m=CLIMARC[i];
+  if(!m){m=marcaCliente(i,v);L.polyline([[v[8],v[9]],[c[1],c[2]]],{color:COR('--mu'),weight:2,dashArray:'4 6',opacity:.8}).addTo(CAMADA)}
+  MAPA.fitBounds(L.latLngBounds([[v[8],v[9]],[c[1],c[2]]]).pad(.6),{maxZoom:17});
+  setTimeout(()=>m.openPopup(),350);
+}
+function vaiCheckin(i){const m=MARC[i];if(!m)return;MAPA.setView(m.getLatLng(),Math.max(MAPA.getZoom(),16));setTimeout(()=>m.openPopup(),350)}
+
+/* ---------- caminho pelas ruas entre as entradas ----------
+   Estimativa: o serviço público OSRM (router.project-osrm.org) recebe as coordenadas das entradas do vendedor e dia
+   escolhidos e devolve o caminho de carro. Não é o trajeto real do GPS (esse só existe no portal GPS).
+   O resultado fica guardado enquanto a página está aberta, então cada dia só é consultado uma vez. */
+const ROTAS={};
+const mCurta=(a,b)=>{const dy=(a[0]-b[0])*111320,dx=(a[1]-b[1])*111320*Math.cos(a[0]*Math.PI/180);return Math.hypot(dx,dy)};
+function semRepetidos(ll){const o=[];for(const p of ll)if(!o.length||mCurta(o[o.length-1],p)>20)o.push(p);return o}
+async function rotaRuas(ll){
+  let out=[];
+  for(let i=0;i<ll.length-1;i+=49){const parte=ll.slice(i,i+50);
+    const url='https://router.project-osrm.org/route/v1/driving/'+parte.map(x=>x[1]+','+x[0]).join(';')+'?overview=full&geometries=geojson';
+    const j=await (await fetch(url)).json();
+    if(j.code!=='Ok'||!j.routes.length)throw new Error(j.code||'sem rota');
+    out=out.concat(j.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]));
+  }
+  return out;
+}
+
+/* ---------- mapa ---------- */
+let MLG=null,ESTILO_ORIG=null,MAPA=null,CAMADA=null,MARC=[],CLIMARC=[],SVMARC=[],PVMARC=[],RECATUAL=null,ULT_FIT='';
+const COR=k=>getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+function iniciaMapa(){
+  if(typeof L==='undefined'){$('map').innerHTML='<div class="semmapa">O mapa precisa de internet para carregar.<br>O resto do painel funciona normalmente.</div>';return}
+  MAPA=L.map('map',{preferCanvas:true,zoomControl:true}).setView([-15.8,-47.9],11);
+  CAMADA=L.layerGroup().addTo(MAPA);
+  MAPA.on('popupopen',e=>e.popup.getElement().querySelectorAll('.go').forEach(b=>{b.onclick=()=>{const i=+b.dataset.i;b.classList.contains('go-cli')?vaiCliente(i):vaiCheckin(i)}}));
+  const reserva=()=>L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,className:'osm',
+    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(MAPA);
+  if(typeof maplibregl==='undefined'||!L.maplibreGL){reserva();return}
+  fetch('https://tiles.openfreemap.org/styles/positron').then(r=>r.json()).then(estilo=>{
+    ESTILO_ORIG=JSON.stringify(estilo);
+    MLG=L.maplibreGL({style:pintaAzul(estilo,document.documentElement.dataset.theme==='dark'),
+      attribution:'&copy; <a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(MAPA);
+  }).catch(reserva);
+}
+/* Paleta azul do mapa vetorial: cada elemento do mapa ganha sua cor. Mude aqui para outro tom. */
+function pintaAzul(estilo,escuro){
+  const P=escuro
+    ?{bg:'#0b1828',agua:'#17406e',verde:'#0f2338',bairro:'#0e1f33',predio:'#173253',rua:'#1a3658',ruaB:'#0b1828',av:'#24507f',avB:'#0f2944',via:'#3a72b0',viaB:'#173d66',trem:'#29496e',lim:'#3d628c',txt:'#a8c8ec',txtB:'#0b1828',txtAgua:'#6fa3dc'}
+    :{bg:'#eaf2fb',agua:'#8fbde9',verde:'#d6e6f6',bairro:'#e1ecf8',predio:'#cfdff1',rua:'#ffffff',ruaB:'#c9dbef',av:'#ffffff',avB:'#a9c4e3',via:'#b8d3f1',viaB:'#6f9bd0',trem:'#a5bcd8',lim:'#7e9dc4',txt:'#1f3f66',txtB:'#f4f8fd',txtAgua:'#2f6db0'};
+  const cor=(l,c)=>{l.paint=l.paint||{};
+    if(l.type==='fill'){l.paint['fill-color']=c;l.paint['fill-outline-color']=c}
+    else if(l.type==='line')l.paint['line-color']=c;
+    else if(l.type==='background')l.paint['background-color']=c};
+  for(const l of estilo.layers){const id=l.id;
+    if(l.type==='symbol'){l.paint=l.paint||{};
+      l.paint['text-color']=/water/.test(id)?P.txtAgua:P.txt;l.paint['text-halo-color']=P.txtB;l.paint['text-halo-width']=1.4;continue}
+    if(l.type==='background')cor(l,P.bg);
+    else if(/water/.test(id))cor(l,P.agua);
+    else if(/park|wood|glacier|ice/.test(id))cor(l,P.verde);
+    else if(/residential|aeroway-area|road_area/.test(id))cor(l,P.bairro);
+    else if(/building/.test(id))cor(l,P.predio);
+    else if(/motorway.*casing/.test(id))cor(l,P.viaB);
+    else if(/motorway/.test(id))cor(l,P.via);
+    else if(/major.*casing/.test(id))cor(l,P.avB);
+    else if(/major/.test(id))cor(l,P.av);
+    else if(/minor|path|pier|taxiway|runway/.test(id))cor(l,P.rua);
+    else if(/railway/.test(id))cor(l,P.trem);
+    else if(/boundary/.test(id))cor(l,P.lim);
+  }
+  return estilo;
+}
+const pinIcone=(txt,cls)=>L.divIcon({className:'',html:`<div class="pin ${cls}">${txt}</div>`,iconSize:[26,26],iconAnchor:[13,13],popupAnchor:[0,-12]});
+function popVisita(v,n){
+  const c=cli(v[0]),s=st(v);
+  return `<b>${n?n+'. ':''}${esc(c[0]||'Cliente '+v[0])}</b><br><span style="color:${COR('--mu')}">cód. ${v[0]}</span><br>
+    ${v[1]}–${v[2]||'…'} · ${fdur(v[3])}${v[3]>=0&&v[3]<R.relampago_seg?' ⚡':''}<br>
+    <b style="color:${COR({ped:'--ok',mcp:'--wa',nv:'--no',sr:'--mu'}[s])}">${s==='ped'?STL.ped:s==='sr'?STL.sr:esc(MOT[v[4]]||'Motivo '+v[4])}</b>${s==='mcp'?' (tem pedido no dia)':''}<br>
+    Distância do cliente: <b>${fdist(v[6])}</b>${n&&c[1]!=null&&v[8]!=null?`<br><button class="go go-cli" data-i="${n-1}">Ver endereço do cliente →</button>`:''}`;
+}
+function desenhaMapa(regs){
+  if(!MAPA)return;
+  CAMADA.clearLayers();MARC=[];CLIMARC=[];SVMARC=[];PVMARC=[];RECATUAL=null;
+  const pts=[];
+  const rec=S.sel!=null&&S.dia?regs.find(r=>r.v===S.sel&&r.d===S.dia):null;
+  if(rec){
+    RECATUAL=rec;
+    $('mtit').textContent=`Roteiro de ${vnome(S.sel)}`;
+    const msubRota=txt=>{$('msub').textContent=`${fdl(S.dia)} · ${txt}`};
+    msubRota('entradas na ordem em que aconteceram (não é o trajeto do GPS)');
+    const linha=[];
+    rec.vis.forEach((v,i)=>{
+      if(v[8]==null){MARC.push(null);return}
+      const ll=[v[8],v[9]];linha.push(ll);pts.push(ll);
+      const longe=v[6]>R.longe_m;
+      const m=L.marker(ll,{icon:pinIcone(i+1,st(v)+(longe?' longe':'')),zIndexOffset:i}).bindPopup(popVisita(v,i+1)).addTo(CAMADA);
+      MARC.push(m);
+      const c=cli(v[0]);
+      if(longe&&c[1]!=null){
+        L.polyline([ll,[c[1],c[2]]],{color:COR('--no'),weight:2,dashArray:'4 6',opacity:.8}).addTo(CAMADA);
+        marcaCliente(i,v);
+        pts.push([c[1],c[2]]);
+      }
+    });
+    if(linha.length>1){
+      const key=S.sel+'|'+S.dia,pontos=semRepetidos(linha),estilo={color:COR('--ac'),weight:4,opacity:.85,dashArray:'1 9',lineCap:'round'};
+      const info='pontilhado = caminho estimado pelas ruas entre as entradas (não é o trajeto do GPS)';
+      if(Array.isArray(ROTAS[key])){L.polyline(ROTAS[key],estilo).addTo(CAMADA);msubRota(info)}
+      else{
+        L.polyline(linha,{...estilo,weight:2,opacity:.45}).addTo(CAMADA);
+        if(ROTAS[key]==='erro'||pontos.length<2)msubRota('linha reta entre as entradas (não foi possível buscar o caminho pelas ruas)');
+        else{
+          msubRota('buscando o caminho pelas ruas…');
+          if(ROTAS[key]!=='busca'){ROTAS[key]='busca';
+            rotaRuas(pontos).then(g=>{ROTAS[key]=g},()=>{ROTAS[key]='erro'}).then(()=>{if(S.vis==='mapa'&&S.sel+'|'+S.dia===key)desenhaMapa(filtrados())})}
+        }
+      }
+    }
+    colocaBoneco(rec);
+    rec.sv.forEach(([pdv,n,val],k)=>{const c=cli(pdv);if(c[1]==null)return;pts.push([c[1],c[2]]);
+      SVMARC[k]=L.marker([c[1],c[2]],{icon:pinIcone('$','sv')}).bindPopup(`<b>${esc(c[0])}</b><br>cód. ${pdv}<br><b style="color:${COR('--pu')}">Pedido sem visita</b><br>${n} pedido${n>1?'s':''} · ${brl(val)}`).addTo(CAMADA)});
+    if(S.pot)potDoVendedor(S.sel).forEach(p=>{
+      L.circleMarker([p.lat,p.lon],{radius:6,weight:2,color:'#fff',fillColor:'#0ea5a4',fillOpacity:.95}).bindTooltip(`<b>${esc(p.n||'(sem nome)')}</b><br>${esc(POT.tipos[p.t])}<br>Potencial: ainda não é cliente`).addTo(CAMADA)});
+    if(S.prevmapa&&rec.pv)rec.pv.forEach((pdv,k)=>{const c=cli(pdv);if(c[1]==null)return;pts.push([c[1],c[2]]);
+      PVMARC[k]=L.marker([c[1],c[2]],{icon:L.divIcon({className:'',html:'<div class="pvm"></div>',iconSize:[14,14],iconAnchor:[7,7]}),zIndexOffset:-500})
+        .bindPopup(`<b>${esc(c[0]||'Cliente '+pdv)}</b><br>${c[3]?esc(c[3])+'<br>':''}cód. ${pdv}${c[4]?' · '+esc(c[4]):''}<br><b style="color:${COR('--c1')}">Previsto na rota, sem visita</b>`).addTo(CAMADA)});
+  }else{
+    $('mtit').textContent='Mapa das visitas';
+    $('msub').textContent='Cada ponto é uma entrada. Clique num ponto ou num vendedor para ver o roteiro.';
+    const cores={ped:COR('--ok'),mcp:COR('--wa'),nv:COR('--no'),sr:COR('--gr')};
+    for(const r of regs)for(const v of r.vis){
+      if(v[8]==null)continue;const ll=[v[8],v[9]];pts.push(ll);
+      L.circleMarker(ll,{radius:5,weight:v[6]>R.longe_m?2:1,color:v[6]>R.longe_m?cores.nv:'#fff',fillColor:cores[st(v)],fillOpacity:.9})
+        .bindTooltip(`${r.v} · ${esc(vnome(r.v))}<br>${esc(cli(v[0])[0])} · ${v[1]}`)
+        .on('click',()=>{S.sel=r.v;S.dia=r.d;render()}).addTo(CAMADA);
+    }
+  }
+  const chave=[S.de,S.ate,S.sup,S.q,S.sel,S.dia].join('|');
+  if(chave!==ULT_FIT&&pts.length){MAPA.fitBounds(L.latLngBounds(pts).pad(.08),{maxZoom:16});ULT_FIT=chave}
+  if(S.m3)desenha3D(regs,rec);
+}
+
+/* ---------- roteiro do dia ---------- */
+const potDoVendedor=v=>POT&&v!=null?((POT.vend[v]||[]).map(i=>POT.pois[i])):[];
+function baixaPotCsv(){
+  const L=potDoVendedor(S.sel);if(!L.length)return;
+  const q=x=>'"'+String(x||'').replace(/"/g,'""')+'"',NL=String.fromCharCode(10);
+  const csv=String.fromCharCode(65279)+'tipo;nome;latitude;longitude;link_mapa'+NL+L.map(p=>[q(POT.tipos[p.t]),q(p.n),p.lat,p.lon,q('https://www.google.com/maps?q='+p.lat+','+p.lon)].join(';')).join(NL);
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='potenciais_'+S.sel+'.csv';a.click();
+}
+function exportaPotenciais(fsup=S.sup,fvend=S.vend,ftipo='',fq=''){
+  if(!POT)return;
+  const q=x=>'"'+String(x==null?'':x).replace(/"/g,'""')+'"',NL=String.fromCharCode(10);
+  const linhas=[];
+  Object.keys(POT.vend).forEach(c=>{const v=VEND[c];if(!v)return;
+    if(fsup&&v.sup!==fsup)return;if(fvend&&String(c)!==String(fvend))return;
+    const mesa=v.cs!=null?v.cs*10:0,sup=supRot(v.sup).replace(/^Mesas? [\d e]+ · /,'');
+    POT.vend[c].map(i=>POT.pois[i]).filter(p=>(!ftipo||p.t===ftipo)&&(!fq||(p.n||'').toLowerCase().includes(fq))).sort((a,b)=>a.t.localeCompare(b.t)||(a.n||'~').localeCompare(b.n||'~')).forEach(p=>
+      linhas.push({k:[mesa,sup,+c],r:[mesa,q(sup),c,q(nomeBonito(v.nome)),q(POT.tipos[p.t]),q(p.n||'(sem nome no mapa)'),p.lat,p.lon,q('https://www.google.com/maps?q='+p.lat+','+p.lon)].join(';')}))});
+  if(!linhas.length){alert('Nenhum potencial para o filtro atual.');return}
+  linhas.sort((a,b)=>a.k[0]-b.k[0]||a.k[1].localeCompare(b.k[1])||a.k[2]-b.k[2]);
+  const csv=String.fromCharCode(65279)+'mesa;supervisor;vendedor;nome_vendedor;tipo;estabelecimento;latitude;longitude;link_mapa'+NL+linhas.map(l=>l.r).join(NL);
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='potenciais'+(S.vend?'_'+S.vend:S.sup?'_mesa':'_todos')+'.csv';a.click();
+}
+function roteiro(regs){
+  if(S.sel==null){$('rtit').textContent='Roteiro do dia';$('rsub').textContent='';
+    $('rot').innerHTML='<p class="empty">Escolha um vendedor na lista ou clique num ponto do mapa.</p>';return}
+  const rs=regs.filter(r=>r.v===S.sel).sort((a,b)=>b.d.localeCompare(a.d));
+  if(!rs.some(r=>r.d===S.dia))S.dia=rs[0]?.d||null;
+  const r=rs.find(x=>x.d===S.dia);
+  $('rtit').textContent=`${S.sel} · ${vnome(S.sel)}`;$('rsub').textContent=(VEND[S.sel]||{}).sup||'';
+  if(!r){$('rot').innerHTML='<p class="empty">Sem movimento no período.</p>';return}
+  const m=r.m;
+  const dias=rs.length>1?`<div class="dias">${rs.map(x=>`<button data-d="${x.d}" class="${x.d===S.dia?'on':''}">${fdt(x.d)}</button>`).join('')}</div>`:'';
+  const res=`<div class="res"><div><span>Início</span><b>${m.ini||'—'}</b></div><div><span>Fim</span><b>${m.fim||'—'}</b></div><div><span>Jornada</span><b>${fmin(m.jor)}</b></div>
+    <div><span>Previstos</span><b>${m.prev??'—'}</b></div><div><span>Visitados</span><b>${m.cli}</b></div><div><span>Pendentes</span><b>${m.pend??'—'}</b></div><div><span>Positivados</span><b>${m.pos}</b></div><div><span>Conversão</span><b style="color:${corCv(pct(m.posv,m.cli))}">${fp(pct(m.posv,m.cli))}</b></div><div><span>Valor</span><b>${brl(m.val)}</b></div></div>`;
+  const pa=posAtual(r);
+  const agora=pa?`<div class="agora-box" data-i="${pa.i}"><span class="agora-dot"></span><div><b>${pa.aberta?'No cliente agora':'Última posição conhecida'}</b>
+    <div>${esc(pa.c[0]||'Cliente '+pa.v[0])} · ${pa.aberta?'entrada às '+pa.ref:'saída às '+pa.ref} · há ${fmin(pa.min)}</div>
+    <small>Sem GPS ao vivo no banco: é a última entrada recebida (dados de ${D.gerado}). Atualize o painel para ver o mais recente.</small></div></div>`:'';
+  const its=r.vis.map((v,i)=>{const s=st(v),c=cli(v[0]);
+    const t=[];
+    t.push(s==='ped'?'<span class="tag ok">pedido na visita</span>':s==='sr'?'<span class="tag mu">sem registro</span>':`<span>${esc(MOT[v[4]]||'Motivo '+v[4])}</span>`);
+    if(s==='mcp')t.push('<span class="tag wa">tem pedido no dia</span>');
+    if(v[3]>=0&&v[3]<R.relampago_seg)t.push('<span class="tag no">⚡ relâmpago</span>');
+    if(v[6]>R.longe_m)t.push(`<span class="tag no">📍 ${fdist(v[6])}</span>`);else if(v[6]<0)t.push('<span class="tag mu">sem GPS</span>');
+    return `<div class="it" data-i="${i}"><div class="pin ${s}${v[6]>R.longe_m?' longe':''}">${i+1}</div>
+      <div><div class="ti">${v[1]}–${v[2]||'…'}</div><div class="cn">${esc(c[0]||'Cliente '+v[0])}</div>${cliId(v[0])}<div class="rs">${t.join('')}</div></div>
+      <div class="du">${fdur(v[3])}${v[6]>=0&&v[6]<=R.longe_m?`<br>${fdist(v[6])}`:''}</div></div>`}).join('');
+  const sv=r.sv.length?`<div class="sub">Pedidos sem visita (${r.sv.length})</div>${r.sv.map(([pdv,n,val,org],k)=>`<div class="it" data-sv="${k}"><div class="pin sv">$</div><div><div class="cn">${esc(cli(pdv)[0]||'Cliente '+pdv)}</div>${cliId(pdv)}<div class="rs">${n} pedido${n>1?'s':''} · origem ${esc(org)}</div></div><div class="du">${brl(val)}</div></div>`).join('')}`:'';
+  const pvl=S.prevmapa&&r.pv&&r.pv.length?`<div class="sub">Previstos sem visita (${r.pv.length})</div>${r.pv.map((pdv,k)=>`<div class="it" data-pv="${k}"><div class="pin pvp"></div><div><div class="cn">${esc(cli(pdv)[0]||'Cliente '+pdv)}</div>${cliId(pdv)}<div class="rs">previsto na rota, sem entrada</div></div><div></div></div>`).join('')}`:'';
+  const pot=potDoVendedor(S.sel);
+  const potl=pot.length?`<div class="sub">Clientes em potencial perto da rota (${pot.length})</div><div class="potres">${
+    Object.entries(pot.reduce((a,p)=>(a[p.t]=(a[p.t]||0)+1,a),{})).map(([k,n])=>`<span class="tag pot${k}">${n} ${esc(POT.tipos[k].toLowerCase())}</span>`).join('')}</div>
+    <button class="bt2 potbtn" id="potcsv">Baixar lista (CSV)</button>
+    ${pot.slice(0,40).map((p,k)=>`<div class="it" data-pt="${k}"><div class="pin pot ${p.t}"></div><div><div class="cn">${esc(p.n||'(sem nome no mapa)')}</div><div class="rs">${esc(POT.tipos[p.t])}</div></div><div></div></div>`).join('')}${pot.length>40?`<p class="nota">Mostrando 40 de ${pot.length}. A lista completa está no CSV.</p>`:''}`:'';
+  $('rot').innerHTML=dias+res+agora+(r.vis.length?`<div class="tl">${its}</div>`:'<p class="empty">Nenhuma visita registrada no GPS neste dia.</p>')+sv+pvl+potl;
+}
+
+/* ---------- motivos ---------- */
+function motivos(t,titulo){
+  const it=Object.entries(t.mot).map(([c,n])=>({n,nome:MOT[c]||('Motivo '+c)})).sort((a,b)=>b.n-a.n);
+  const tot=it.reduce((a,b)=>a+b.n,0),mx=it.length?it[0].n:1;
+  $('motsub').textContent=`${titulo} · ${n0(tot)} visitas`;
+  $('mot').innerHTML=it.length?it.map(x=>`<div class="rank"><div title="${esc(x.nome)}">${esc(x.nome)}</div><div class="bar"><i style="width:${x.n/mx*100}%"></i></div><div class="pc">${n0(x.n)} · ${(x.n/tot*100).toFixed(0)}%</div></div>`).join(''):'<p class="empty">Nenhum motivo registrado.</p>';
+}
+
+/* ---------- tabela ---------- */
+const COLS=[['nome','Vendedor','l'],['sup','Supervisor','l'],['prev','Previstos'],['cli','Visitados'],['pend','Pendentes'],['pos','Positivados'],['posv','Na visita'],['conv','Conversão'],
+  ['semv','Sem visita'],['nvp','Motivo c/ pedido'],['rel','Relâmpago'],['longe','Longe'],['iniM','1ª entrada'],['fimM','Última saída'],
+  ['jorM','Jornada'],['mediaVis','Média/visita'],['ped','Pedidos'],['val','Valor']];
+let LINHAS=[];
+function tabela(rows){
+  const k=S.tord,d=S.tdir;
+  rows.sort((a,b)=>{let x=a[k],y=b[k];
+    if(k==='sup'){x=a.sup+'|'+String(a.cod).padStart(6,'0');y=b.sup+'|'+String(b.cod).padStart(6,'0')}
+    if(x==null)return 1;if(y==null)return -1;return (typeof x==='string'?x.localeCompare(y):x-y)*d});
+  LINHAS=rows;
+  const tg=(n,c)=>n?`<span class="tag ${c}">${n}</span>`:'<span class="z">0</span>';
+  const head=COLS.map(([c,t,l])=>`<th data-c="${c}" class="${l||''} ${S.tord===c?'hs':''}">${t}${S.tord===c?(S.tdir>0?' ▲':' ▼'):''}</th>`).join('');
+  $('tab').innerHTML=rows.length?`<table><thead><tr>${head}</tr></thead><tbody>${rows.map(r=>`<tr data-v="${r.cod}">
+    <td class="l nm" title="${esc(r.nome)}">${r.cod} · ${esc(r.nome)}</td><td class="l mu" title="${esc(r.sup)}">${esc(supRot(r.sup))}</td>
+    <td>${n0(r.prev)}</td><td>${n0(r.cli)}</td><td>${n0(r.pend)}</td><td>${n0(r.pos)}</td><td>${n0(r.posv)}</td>
+    <td><span class="cvc">${fp(r.conv)}<i><b style="width:${Math.min(r.conv||0,100)}%;background:${corCv(r.conv)}"></b></i></span></td>
+    <td>${tg(r.semv,'pu')}</td><td>${tg(r.nvp,'wa')}</td><td>${tg(r.rel,r.relP>=25?'no':'wa')}</td><td>${tg(r.longe,'no')}</td>
+    <td>${deMin(r.iniM)}</td><td>${deMin(r.fimM)}</td><td>${fmin(r.jorM)}</td><td>${r.vis?Math.round(r.mediaVis)+' min':'—'}</td>
+    <td>${n0(r.ped)}</td><td>${brl(r.val)}</td></tr>`).join('')}</tbody></table>`:'<p class="empty">Nenhum vendedor no filtro.</p>';
+  $('tsub').textContent=`${rows.length} vendedores${S.de===S.ate?'':' · horários e jornada são a média dos dias'} · clique numa linha para ver no mapa`;
+}
+
+/* ---------- como ler ---------- */
+$('como').innerHTML=[
+  ['Visitados','clientes diferentes com entrada no GPS no dia (igual à coluna "Visitados" do site).'],
+  ['Positivados','clientes com pelo menos um pedido do vendedor no dia no sistema de pedidos, com ou sem visita.'],
+  ['Conversão','parte dos clientes visitados que comprou no dia.'],
+  ['Pedido sem visita','cliente com pedido no dia sem nenhuma entrada do vendedor nele.'],
+  ['Motivo c/ pedido','a visita foi registrada com motivo de não compra, mas o cliente tem pedido no dia.'],
+  ['Relâmpago',`visita com menos de ${R.relampago_seg/60} minutos entre a entrada e a saída.`],
+  ['Longe',`entrada a mais de ${R.longe_m} m da coordenada do cadastro do cliente. No mapa, a linha tracejada liga a entrada ao endereço do cliente.`],
+  ['Previstos','clientes da rota do vendedor naquele dia (dia da semana e semana do ciclo no cadastro). Pendentes = previstos sem entrada; fora da rota = visitados que não eram do dia.'],
+  ['Roteiro no mapa','os números seguem a ordem das entradas. A linha liga uma entrada à outra: não é o trajeto do GPS, que só existe no GPS.'],
+].map(([a,b])=>`<div><b>${a}:</b> ${b}</div>`).join('');
+
+/* ---------- desenho e eventos ---------- */
+
+/* ---------- dica flutuante (hover) ---------- */
+const TIP=document.createElement('div');TIP.id='tip';document.body.appendChild(TIP);
+function mostraTip(e,html){TIP.innerHTML=html;TIP.style.display='block';const w=TIP.offsetWidth;
+  TIP.style.left=Math.max(8,Math.min(e.clientX+14,innerWidth-w-8))+'px';TIP.style.top=(e.clientY+16)+'px'}
+const somaTip=()=>{TIP.style.display='none'};
+document.addEventListener('mousemove',e=>{const el=e.target.closest&&e.target.closest('[data-tip]');if(el)mostraTip(e,el.dataset.tip);else if(!e.target.closest||!e.target.closest('.lw'))somaTip()});
+
+/* ---------- gráfico de linhas/área em SVG (um eixo só) ---------- */
+function linhas(el,o){
+  const n=o.x.length;if(!n){el.innerHTML='<p class="empty">Sem dados no período gerado.</p>';return}
+  const W=Math.max(el.clientWidth||0,260),H=o.h,m=o.mini?{l:0,r:0,t:6,b:4}:{l:36,r:44,t:12,b:26};
+  const mx=Math.max(1,...o.s.flatMap(s=>s.v));
+  const pas=[1,2,5,10,20,25,50,100,200,250,500,1000,2000,5000],ps=pas.find(p=>mx/p<=4)||5000,yMax=Math.ceil(mx/ps)*ps;
+  const X=i=>m.l+(n<2?(W-m.l-m.r)/2:i*(W-m.l-m.r)/(n-1)),Y=v=>H-m.b-v/yMax*(H-m.t-m.b);
+  const curva=v=>v.map((y,i)=>i?`C${(X(i-1)+X(i))/2},${Y(v[i-1])} ${(X(i-1)+X(i))/2},${Y(y)} ${X(i)},${Y(y)}`:`M${X(0)},${Y(y)}`).join(' ');
+  const id=el.id;let g='';
+  if(!o.mini){
+    for(let v=0;v<=yMax;v+=ps)g+=`<line x1="${m.l}" x2="${W-m.r}" y1="${Y(v)}" y2="${Y(v)}" class="gr"/><text x="${m.l-8}" y="${Y(v)+4}" class="ax" text-anchor="end">${v}</text>`;
+    const k=Math.max(1,Math.ceil(n/Math.floor((W-m.l-m.r)/52)));
+    o.x.forEach((d,i)=>{if(i%k===0)g+=`<text x="${X(i)}" y="${H-6}" class="ax" text-anchor="${i===n-1?'end':'middle'}">${fdt(d)}</text>`});
+    if(o.sel){const st=n<2?0:(W-m.l-m.r)/(n-1),a=X(o.sel[0])-st/2,b=X(o.sel[1])+st/2;g=`<rect x="${Math.max(m.l,a)}" y="${m.t}" width="${Math.min(W-m.r,b)-Math.max(m.l,a)}" height="${H-m.t-m.b}" class="band" rx="6"/>`+g}
+  }
+  let defs='',areas='',lns='',lab='';
+  o.s.forEach((s,j)=>{
+    if(s.area){defs+=`<linearGradient id="a${id}${j}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${s.c}" stop-opacity=".32"/><stop offset="1" stop-color="${s.c}" stop-opacity="0"/></linearGradient>`;
+      areas+=`<path d="${curva(s.v)} L${X(n-1)},${Y(0)} L${X(0)},${Y(0)}Z" fill="url(#a${id}${j})"/>`}
+    lns+=`<path d="${curva(s.v)}" fill="none" stroke="${s.c}" stroke-width="${o.mini?2.2:2.6}" stroke-linecap="round" ${s.dash?'stroke-dasharray="5 5"':''}/>`;
+    lns+=`<circle cx="${X(n-1)}" cy="${Y(s.v[n-1])}" r="4" fill="${s.c}" stroke="${o.mini?'#fff':'var(--card)'}" stroke-width="2"/>`;
+  });
+  if(!o.mini){  // valor no fim de cada linha, afastando rótulos que se encostam
+    const fim=o.s.map((s,j)=>({j,y:Y(s.v[n-1]),v:s.v[n-1]})).sort((a,b)=>a.y-b.y);
+    for(let i=1;i<fim.length;i++)if(fim[i].y-fim[i-1].y<13)fim[i].y=fim[i-1].y+13;
+    fim.forEach(f=>lab+=`<text x="${X(n-1)+9}" y="${f.y+4}" class="lbv">${f.v}</text>`)}
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(o.aria||'')}"><defs>${defs}</defs>${g}${areas}${lns}${lab}
+    <line class="chv" y1="${m.t}" y2="${H-m.b}" style="display:none"/>${o.s.map(s=>`<circle r="5" fill="${s.c}" stroke="var(--card)" stroke-width="2" style="display:none"/>`).join('')}
+    <rect x="${m.l}" y="0" width="${W-m.l-m.r}" height="${H}" fill="transparent"/></svg>`;
+  const svg=el.firstChild,ch=svg.querySelector('.chv'),pts=[...svg.querySelectorAll('circle[r="5"]')],hit=svg.lastChild;
+  hit.onmousemove=e=>{const r=svg.getBoundingClientRect(),mxp=(e.clientX-r.left)*(W/r.width);
+    const i=Math.max(0,Math.min(n-1,Math.round((mxp-m.l)/((W-m.l-m.r)/Math.max(1,n-1)))));
+    ch.setAttribute('x1',X(i));ch.setAttribute('x2',X(i));ch.style.display='';
+    pts.forEach((c,j)=>{c.setAttribute('cx',X(i));c.setAttribute('cy',Y(o.s[j].v[i]));c.style.display=''});
+    mostraTip(e,`<b>${fdl(o.x[i])}</b>`+o.s.map(s=>`<div class="tr2"><i style="background:${s.c}"></i>${esc(s.n)}: <b>${n0(s.v[i])}</b></div>`).join(''))};
+  hit.onmouseleave=()=>{ch.style.display='none';pts.forEach(c=>c.style.display='none');somaTip()};
+}
+
+/* ---------- cartões do painel de mapa ---------- */
+let ULTG=null;
+function regsBase(){const q=S.q.trim().toLowerCase();
+  return D.registros.filter(r=>{const v=VEND[r.v]||{nome:'',sup:''};if(S.sup&&v.sup!==S.sup)return false;
+    if(S.vend&&String(r.v)!==String(S.vend))return false;
+    if(q&&!(String(r.v).includes(q)||v.nome.toLowerCase().includes(q)))return false;return true})}
+const UTEIS=datas.filter(d=>{const w=new Date(d+'T12:00').getDay();return w>0&&w<6});
+function porDia(regs){const m={};for(const d of datas)m[d]={prev:0,cli:0,pos:0};
+  for(const r of regs){const x=m[r.d];x.prev+=r.m.prev||0;x.cli+=r.m.cli;x.pos+=r.m.pos}
+  return UTEIS.map(d=>m[d])}
+function anel(p){const r=26,L=2*Math.PI*r,d=Math.max(0,Math.min(100,p||0))/100*L;
+  return `<svg viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Conversão ${fp(p)}"><circle cx="32" cy="32" r="${r}" class="rg0"/><circle cx="32" cy="32" r="${r}" class="rg1" stroke-dasharray="${d} ${L}" transform="rotate(-90 32 32)"/><text x="32" y="36" text-anchor="middle" class="rt">${fp(p)}</text></svg>`}
+function painelGraficos(regs,t,rows){
+  ULTG=[regs,t,rows];
+  const base=regsBase(),dias=porDia(base);
+  // destaque: positivados, anel de conversão e linha dos dias
+  $('hero').innerHTML=`<div class="hl"><div><span class="k">Positivados</span><b class="n">${n0(t.pos)}</b><em>${n0(t.posv)} na visita · ${n0(t.semv)} sem visita</em></div>
+    <div title="Conversão da visita: visitados que compraram">${anel(t.conv)}</div></div>
+    <div class="sp" id="spark"></div>
+    <div class="ft"><span>Valor em pedidos <b>${brl(t.val)}</b></span><span><b>${n0(t.ped)}</b> pedidos</span></div>`;
+  linhas($('spark'),{h:64,mini:true,x:UTEIS,aria:'Positivados por dia',s:[{n:'Positivados',c:'#fff',v:dias.map(d=>d.pos),area:true}]});
+  // rota do período
+  const cob=t.prev?(t.prev-t.pend)/t.prev*100:null,pp=t.prev?t.pos/t.prev*100:null,fo=t.cli?t.fora/t.cli*100:null;
+  const bar=(l,p,txt,c)=>`<div><div class="lb"><span>${l}</span><b>${txt}</b></div><div class="tr"><i style="width:${Math.min(100,p||0)}%;background:${c}"></i></div></div>`;
+  $('metasub').textContent=t.prev?`${n0(t.prev)} clientes previstos`:'';
+  $('metas').innerHTML=t.prev||t.cli?`<div class="mt">
+    ${bar('Rota visitada',cob,`${n0(t.prev-t.pend)} de ${n0(t.prev)} · ${fp(cob)}`,'var(--c1)')}
+    ${bar('Positivados ÷ previstos',pp,`${n0(t.pos)} de ${n0(t.prev)} · ${fp(pp)}`,'var(--ok)')}
+    ${bar('Conversão da visita',t.conv,`${n0(t.posv)} de ${n0(t.cli)} · ${fp(t.conv)}`,corCv(t.conv))}
+    ${bar('Visitas fora da rota',fo,`${n0(t.fora)} de ${n0(t.cli)} · ${fp(fo)}`,'var(--wa)')}</div>`:'<p class="empty">Sem dados no período.</p>';
+  // por supervisor
+  const sp={};for(const r of regs){const s=(VEND[r.v]||{}).sup||'—';sp[s]=(sp[s]||0)+r.m.pos}
+  const bonito=s=>curto(s).toLowerCase().replace(/(^|\s)\S/g,c=>c.toUpperCase());
+  const lst=Object.entries(sp).sort((a,b)=>b[1]-a[1]),mxs=Math.max(1,...lst.map(x=>x[1]));
+  $('porsup').innerHTML=lst.length?`<div class="ps">${lst.map(([s,v])=>`<button data-s="${esc(s)}" class="${S.sup===s?'on':''}" data-tip="${esc(supRot(s))}<br><b>${n0(v)}</b> positivados"><span class="nm">${esc(supRot(s))}</span><span class="tr"><i style="width:${v/mxs*100}%"></i></span><span class="vl">${n0(v)}</span></button>`).join('')}</div>`:'<p class="empty">Sem dados no período.</p>';
+  // rosca: resultado de cada visita
+  const cnt={ped:0,mcp:0,nv:0,sr:0};for(const r of regs)for(const v of r.vis)cnt[st(v)]++;
+  const tot=cnt.ped+cnt.mcp+cnt.nv+cnt.sr,segs=[['ped','var(--ok)'],['mcp','var(--wa)'],['nv','var(--no)'],['sr','var(--gr)']];
+  const R0=62,C=2*Math.PI*R0;let acc=0,arcs='';
+  if(!tot)arcs=`<circle cx="80" cy="80" r="${R0}" fill="none" stroke="var(--card2)" stroke-width="22"/>`;
+  else for(const [k,c] of segs){if(!cnt[k])continue;const len=cnt[k]/tot*C,gap=Math.min(3,len*.3);
+    arcs+=`<circle class="seg0" cx="80" cy="80" r="${R0}" fill="none" stroke="${c}" stroke-width="22" stroke-dasharray="${len-gap} ${C-len+gap}" stroke-dashoffset="${-acc}" transform="rotate(-90 80 80)" data-tip="${STL[k]}<br><b>${n0(cnt[k])}</b> visitas · ${fp(cnt[k]/tot*100)}"/>`;acc+=len}
+  $('rosub').textContent=tot?`${n0(tot)} visitas`:'';
+  $('rosca').innerHTML=`<div class="ro"><svg viewBox="0 0 160 160" width="164" height="164" role="img" aria-label="Resultado das visitas">${arcs}<text x="80" y="82" text-anchor="middle" class="rc">${n0(tot)}</text><text x="80" y="99" text-anchor="middle" class="rc2">visitas</text></svg>
+    <div class="rl">${segs.map(([k,c])=>`<div><i style="background:${c}"></i><span>${STL[k]}</span><span><b>${n0(cnt[k])}</b><small>${tot?fp(cnt[k]/tot*100):''}</small></span></div>`).join('')}</div></div>`;
+  // evolução diária
+  const ix=d=>{let k=UTEIS.findIndex(u=>u>=d);return k<0?UTEIS.length-1:k},ixf=d=>{let k=-1;UTEIS.forEach((u,i)=>{if(u<=d)k=i});return Math.max(0,k)};
+  const i0=ix(S.de),i1=ixf(S.ate);
+  const ser=[{n:'Previstos',c:'var(--mu)',v:dias.map(d=>d.prev),dash:true},{n:'Visitados',c:'var(--c1)',v:dias.map(d=>d.cli),area:true},{n:'Positivados',c:'var(--c2)',v:dias.map(d=>d.pos),area:true}];
+  $('trleg').innerHTML=ser.map(s=>`<span><i style="background:${s.c}${s.dash?';opacity:.7':''}"></i>${s.n}</span>`).join('');
+  const hoje=D.gerado.slice(6,10)+'-'+D.gerado.slice(3,5)+'-'+D.gerado.slice(0,2);
+  linhas($('tend'),{h:196,x:UTEIS,sel:S.de&&S.ate?[Math.min(i0,i1),Math.max(i0,i1)]:null,aria:'Previstos, visitados e positivados por dia',s:ser});
+  if(UTEIS[UTEIS.length-1]===hoje)$('tend').insertAdjacentHTML('beforeend',`<div class="trn">O último dia (hoje) está incompleto: dados até ${D.gerado.slice(11)}.</div>`);
+}
+$('porsup').onclick=e=>{const b=e.target.closest('button[data-s]');if(!b)return;S.sup=S.sup===b.dataset.s?'':b.dataset.s;S.vend='';$('sup').value=S.sup;render()};
+let RZ=null;addEventListener('resize',()=>{clearTimeout(RZ);RZ=setTimeout(()=>{if(S.vis==='mapa'&&ULTG)painelGraficos(...ULTG)},200)});
+
+
+/* ---------- visão Positivação: previstos x positivados até o momento (por vendedor ou supervisor) ---------- */
+S.pdia=ult;S.psup='';S.pvend='';
+const SUPCS={};Object.values(VEND).forEach(v=>{if(v.cs!=null)(SUPCS[v.sup]=SUPCS[v.sup]||new Set()).add(v.cs*10)});
+const supRot=s=>{const c=[...(SUPCS[s]||[])].sort((a,b)=>a-b);return (c.length?(c.length>1?'Mesas ':'Mesa ')+c.join(' e ')+' · ':'')+String(s||'').replace(/ \(\d+\)$/,'').toLowerCase().replace(/(^|\s)\S/g,x=>x.toUpperCase()).replace(/ (De|Da|Do|Dos|Das)(?= )/g,x=>x.toLowerCase())};
+const supOrd=(a,b)=>Math.min(...(SUPCS[a]||[9999]))-Math.min(...(SUPCS[b]||[9999]))||(a<b?-1:1);
+const nomeBonito=s=>String(s||'').toLowerCase().replace(/(^|\s)\S/g,c=>c.toUpperCase());
+function posOpcoes(){
+  const sups=[...new Set(Object.values(VEND).map(v=>v.sup))].sort(supOrd);
+  $('psup').innerHTML='<option value="">Todos os supervisores</option>'+sups.map(s=>`<option value="${esc(s)}" ${S.psup===s?'selected':''}>${esc(supRot(s))}</option>`).join('');
+  const vs=Object.entries(VEND).filter(([c,v])=>!S.psup||v.sup===S.psup).sort((a,b)=>a[0]-b[0]);
+  $('pvend').innerHTML='<option value="">Todos os vendedores</option>'+vs.map(([c,v])=>`<option value="${c}" ${String(S.pvend)===c?'selected':''}>${c} · ${esc(nomeBonito(curto(v.nome)))}</option>`).join('');
+  $('pdia').value=S.pdia;$('pdia').min=D.inicio;$('pdia').max=D.fim;
+}
+let PDFD=null;
+function posView(){
+  posOpcoes();
+  const d=S.pdia,hoje=D.gerado.slice(6,10)+'-'+D.gerado.slice(3,5)+'-'+D.gerado.slice(0,2);
+  // média de positivados por dia nos 5 dias úteis anteriores (referência)
+  const ant=UTEIS.filter(x=>x<d).slice(-5);
+  const mediaAnt=cod=>ant.length?ant.reduce((s,x)=>{const r=D.registros.find(y=>y.d===x&&y.v===cod);return s+(r?r.m.pos:0)},0)/ant.length:null;
+  const regs=D.registros.filter(r=>r.d===d&&(!S.psup||(VEND[r.v]||{}).sup===S.psup)&&(!S.pvend||String(r.v)===String(S.pvend)));
+  const linhas=regs.map(r=>({cod:r.v,nome:(VEND[r.v]||{}).nome||'',sup:(VEND[r.v]||{}).sup||'—',prev:r.m.prev||0,pos:r.m.pos,posr:r.m.posr||0,ini:r.m.ini,fim:r.m.fim,med:mediaAnt(r.v)}))
+    .sort((a,b)=>a.sup.localeCompare(b.sup)||a.cod-b.cod);
+  const quando=d===hoje?`até ${D.gerado.slice(11)}`:'dia fechado';
+  const meta=`${fdl(d)} · ${quando}`;
+  const soma=a=>a.reduce((t,r)=>({prev:t.prev+r.prev,pos:t.pos+r.pos,posr:t.posr+r.posr,med:t.med+(r.med||0)}),{prev:0,pos:0,posr:0,med:0});
+  const pc=(a,b)=>b?a/b*100:null,cor=p=>p==null?'var(--gr)':p>=50?'var(--ok)':p<25?'var(--no)':'var(--wa)';
+  const barra=p=>`<span class="pbx"><i style="width:${Math.min(100,p||0)}%;background:${cor(p)}"></i></span>`;
+  const linha=(r,cls)=>`<tr class="${cls||''}"><td class="l">${r.nome!==undefined&&r.cod!=null?`${r.cod} · ${esc(nomeBonito(r.nome))}`:r.rot}</td><td>${n0(r.prev)}</td><td><b>${n0(r.pos)}</b></td><td>${n0(r.posr)}</td>
+    <td class="pcc">${barra(pc(r.posr,r.prev))}<span style="color:${cor(pc(r.posr,r.prev))}">${fp(pc(r.posr,r.prev))}</span></td><td>${n0(Math.max(0,r.prev-r.posr))}</td><td>${r.med==null?'—':r.med.toFixed(1).replace('.',',')}</td><td>${r.ini||'—'}</td><td>${r.fim||'—'}</td></tr>`;
+  if(!linhas.length){$('posbody').innerHTML='<p class="empty">Nenhum vendedor com rota ou movimento neste dia no período gerado.</p>';return}
+  const T=soma(linhas),nv=linhas.length;
+  const grupos={};linhas.forEach(r=>(grupos[r.sup]=grupos[r.sup]||[]).push(r));
+  const corpo=Object.entries(grupos).map(([sup,rs])=>{const g=soma(rs);
+    return (Object.keys(grupos).length>1?`<tr class="gh"><td class="l" colspan="9">${esc(supRot(sup))}</td></tr>`:'')+rs.map(r=>linha(r)).join('')+
+      (rs.length>1?linha({rot:'Total do supervisor',nome:undefined,prev:g.prev,pos:g.pos,posr:g.posr,med:g.med,ini:'',fim:''},'st'):'')}).join('');
+  PDFD={meta,grupos:Object.entries(grupos),T,nv,ant:ant.length,quando,d,hoje:d===hoje};
+  const filtro=[S.psup?'Supervisor: '+supRot(S.psup):'Todos os supervisores',S.pvend?'Vendedor: '+S.pvend+' · '+nomeBonito(curto((VEND[S.pvend]||{}).nome)):'Todos os vendedores'].join(' · ');
+  const kp=[['Previstos (rota do dia)',n0(T.prev),'clientes que deveriam ser visitados'],[d===hoje?'Positivados até agora':'Positivados no dia',n0(T.pos),`${n0(T.posr)} da rota · ${n0(T.pos-T.posr)} fora da rota`],
+    ['Positivação da rota',fp(pc(T.posr,T.prev)),`${n0(Math.max(0,T.prev-T.posr))} clientes ainda sem pedido`],['Média por vendedor',(T.pos/nv).toFixed(1).replace('.',','),`positivados por vendedor · ${nv} vendedor${nv>1?'es':''}`]]
+    .map(([l,v,e])=>`<div class="kpi"><span class="kl">${l}</span><b>${v}</b><em>${e}</em></div>`).join('');
+  $('posbody').innerHTML=`<div class="pos"><div class="pstop"><b>Positivação do dia · ${meta}</b><br><span>${esc(filtro)}</span></div><div class="kpis4">${kp}</div>
+    <div class="tw"><table><thead><tr><th class="l">Vendedor</th><th>Previstos</th><th>Positivados</th><th>Da rota</th><th>Positivação da rota</th><th>Faltam</th><th>Média ${ant.length} dias</th><th>1ª entrada</th><th>Últ. saída</th></tr></thead><tbody>${corpo}
+    ${Object.keys(grupos).length>1?linha({rot:'TOTAL GERAL',nome:undefined,prev:T.prev,pos:T.pos,posr:T.posr,med:T.med,ini:'',fim:''},'tgeral'):''}</tbody></table></div>
+    <p class="nota">Previstos = clientes da rota do vendedor no dia (cadastro de rota). Positivados = clientes com pedido no dia no sistema de pedidos. Da rota = positivados que estavam na rota. Positivação da rota = da rota ÷ previstos. Faltam = previstos sem pedido. Média ${ant.length} dias = positivados por dia nos ${ant.length} dias úteis anteriores. ${meta}.</p></div>`;
+}
+$('psup').onchange=e=>{S.psup=e.target.value;S.pvend='';render()};
+$('pvend').onchange=e=>{S.pvend=e.target.value;render()};
+$('pdia').onchange=e=>{S.pdia=e.target.value||ult;render()};
+$('ppdf').onclick=()=>print();
+/* ---------- PDF da Positivação em A4 paisagem (jsPDF + autotable), sem passar pelo diálogo de impressão ---------- */
+function baixaPdfPos(){
+  const lib=window.jspdf;
+  if(!lib||!PDFD){alert('Não consegui carregar o gerador de PDF (precisa de internet). Use o botão Imprimir.');return}
+  const {jsPDF}=lib,doc=new jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
+  const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),M=28,CW=W-2*M;
+  const {meta,grupos,T,nv,ant,d,hoje}=PDFD;
+  const pc=(a,b)=>b?a/b*100:null,corP=p=>p==null?[148,160,178]:p>=50?[31,157,99]:p<25?[213,31,54]:[201,133,0];
+  const f1=x=>x==null?'-':x.toFixed(1).replace('.',','),fpp=p=>p==null?'-':Math.round(p)+'%';
+  // cabeçalho do sistema: barra azul, logo e título (sem o subtítulo)
+  doc.setFillColor(14,36,71);doc.roundedRect(M,24,CW,46,10,10,'F');
+  const img=document.querySelector('.logo img');
+  let lx=M+12;
+  try{const iw=img.naturalWidth||3,ih=img.naturalHeight||1,hh=26,ww=hh*iw/ih;
+    doc.setFillColor(255,255,255);doc.roundedRect(lx,33,ww+14,28,6,6,'F');doc.addImage(img.src,'PNG',lx+7,34,ww,hh);lx+=ww+30}catch(e){lx+=10}
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(16);doc.text('Monitoramento de vendedores',lx,52);
+  doc.setTextColor(19,35,61);doc.setFontSize(13);doc.text('Positivação do dia · '+meta,M,92);
+  doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(102,122,150);
+  doc.text([S.psup?'Supervisor: '+supRot(S.psup):'Todos os supervisores',S.pvend?'Vendedor: '+S.pvend+' · '+nomeBonito(curto((VEND[S.pvend]||{}).nome)):'Todos os vendedores'].join(' · '),M,106);
+  // quatro caixas
+  const kp=[['Previstos (rota do dia)',String(T.prev),'clientes que deveriam ser visitados'],[hoje?'Positivados até agora':'Positivados no dia',String(T.pos),`${T.posr} da rota · ${T.pos-T.posr} fora da rota`],
+    ['Positivação da rota',fpp(pc(T.posr,T.prev)),`${Math.max(0,T.prev-T.posr)} clientes ainda sem pedido`],['Média por vendedor',f1(T.pos/nv),`positivados por vendedor · ${nv} vendedor${nv>1?'es':''}`]];
+  const kw=(CW-3*10)/4;
+  kp.forEach(([l,v,e],i)=>{const x=M+i*(kw+10);doc.setFillColor(241,245,252);doc.setDrawColor(224,231,243);doc.roundedRect(x,118,kw,50,8,8,'FD');
+    doc.setFontSize(8.5);doc.setTextColor(102,122,150);doc.setFont('helvetica','bold');doc.text(l,x+10,132);
+    doc.setFontSize(18);doc.setTextColor(19,35,61);doc.text(v,x+10,153);doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(102,122,150);doc.text(e,x+10,163)});
+  // tabela
+  const body=[],meta2=[];
+  const cel=(r)=>[r.rot||`${r.cod} · ${nomeBonito(r.nome)}`,String(r.prev),String(r.pos),String(r.posr),fpp(pc(r.posr,r.prev)),String(Math.max(0,r.prev-r.posr)),r.med==null?'-':f1(r.med),r.ini||'-',r.fim||'-'];
+  const soma=a=>a.reduce((s,r)=>({prev:s.prev+r.prev,pos:s.pos+r.pos,posr:s.posr+r.posr,med:s.med+(r.med||0)}),{prev:0,pos:0,posr:0,med:0});
+  grupos.forEach(([sup,rs])=>{
+    if(grupos.length>1){body.push([{content:supRot(sup),colSpan:9,styles:{fillColor:[225,238,252],textColor:[26,115,209],fontStyle:'bold',halign:'left'}}]);meta2.push({k:'gh'})}
+    rs.forEach(r=>{body.push(cel(r));meta2.push({k:'v',p:pc(r.posr,r.prev)})});
+    if(rs.length>1){const g=soma(rs);body.push(cel({rot:'Total do supervisor',...g}).map(c=>({content:c,styles:{fontStyle:'bold',fillColor:[241,245,252]}})));meta2.push({k:'st',p:pc(g.posr,g.prev)})}
+  });
+  if(grupos.length>1){body.push(cel({rot:'TOTAL GERAL',...T}).map(c=>({content:c,styles:{fontStyle:'bold',fillColor:[225,238,252]}})));meta2.push({k:'tg',p:pc(T.posr,T.prev)})}
+  doc.autoTable({startY:180,margin:{top:28,left:M,right:M,bottom:34},theme:'plain',
+    head:[['Vendedor','Previstos','Positivados','Da rota','Positivação da rota','Faltam','Média '+ant+' dias','1ª entrada','Últ. saída']],body,
+    styles:{font:'helvetica',fontSize:8.5,cellPadding:{top:3.2,bottom:3.2,left:5,right:5},textColor:[19,35,61],lineColor:[224,231,243],lineWidth:{bottom:.5},overflow:'linebreak',valign:'middle'},
+    headStyles:{fontStyle:'bold',textColor:[102,122,150],fontSize:8,lineWidth:{bottom:1},lineColor:[200,212,230]},
+    columnStyles:{0:{cellWidth:230,halign:'left'},1:{halign:'right'},2:{halign:'right',fontStyle:'bold'},3:{halign:'right'},4:{halign:'right'},5:{halign:'right'},6:{halign:'right'},7:{halign:'right'},8:{halign:'right'}},
+    didParseCell:h=>{if(h.section==='head'&&h.column.index>0)h.cell.styles.halign='right';if(h.section==='head'&&h.column.index===0)h.cell.styles.halign='left';
+      const m=meta2[h.row.index];if(h.section==='body'&&m&&m.k!=='gh'&&h.column.index===4)h.cell.styles.textColor=corP(m.p)},
+    didDrawCell:h=>{const m=meta2[h.row.index];
+      if(h.section==='body'&&m&&m.k!=='gh'&&h.column.index===4){const bw=34,x=h.cell.x+6,y=h.cell.y+h.cell.height/2-2.5;
+        doc.setFillColor(224,231,243);doc.roundedRect(x,y,bw,5,2.5,2.5,'F');
+        if(m.p>0){doc.setFillColor(...corP(m.p));doc.roundedRect(x,y,Math.max(3,bw*Math.min(100,m.p)/100),5,2.5,2.5,'F')}}},
+    didDrawPage:h=>{doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(140,152,172);
+      doc.text(`Dados de ${D.gerado} · Página ${doc.internal.getNumberOfPages()}`,W-M,H-16,{align:'right'})}});
+  let y=doc.lastAutoTable.finalY+14;
+  const nota=`Previstos = clientes da rota do vendedor no dia (cadastro de rota). Positivados = clientes com pedido no dia no sistema de pedidos. Da rota = positivados que estavam na rota. Positivação da rota = da rota ÷ previstos. Faltam = previstos sem pedido. Média ${ant} dias = positivados por dia nos ${ant} dias úteis anteriores.`;
+  const linhasN=doc.splitTextToSize(nota,CW);
+  if(y+linhasN.length*10>H-30){doc.addPage();y=40}
+  doc.setFontSize(7.5);doc.setTextColor(102,122,150);doc.text(linhasN,M,y);
+  const nome='positivacao_'+d+(S.pvend?'_'+S.pvend:S.psup?'_'+supRot(S.psup).toLowerCase().replace(/[^a-z0-9]+/g,'-'):'')+'.pdf';
+  doc.save(nome);
+}
+$('ppdfl').onclick=baixaPdfPos;
+/* ---------- visão Sem justificativa: clientes sem venda e sem motivo de não venda no dia ---------- */
+S.jdia=ult;S.jsup='';S.jvend='';
+let JUST=null;
+function justOpcoes(){
+  const sups=[...new Set(Object.values(VEND).map(v=>v.sup))].sort(supOrd);
+  $('jsup').innerHTML='<option value="">Todos os supervisores</option>'+sups.map(s=>`<option value="${esc(s)}" ${S.jsup===s?'selected':''}>${esc(supRot(s))}</option>`).join('');
+  const vs=Object.entries(VEND).filter(([c,v])=>!S.jsup||v.sup===S.jsup).sort((a,b)=>a[0]-b[0]);
+  $('jvend').innerHTML='<option value="">Todos os vendedores</option>'+vs.map(([c,v])=>`<option value="${c}" ${String(S.jvend)===c?'selected':''}>${c} · ${esc(nomeBonito(curto(v.nome)))}</option>`).join('');
+  $('jdia').value=S.jdia;$('jdia').min=D.inicio;$('jdia').max=D.fim;
+}
+/* por vendedor: previstos sem visita (e sem pedido) + visitados sem pedido e sem motivo */
+function justDados(d,sup,vend){
+  const out=[];let semLista=0;
+  for(const r of D.registros){
+    if(r.d!==d)continue;const v=VEND[r.v]||{nome:'',sup:'—'};
+    if(sup&&v.sup!==sup)continue;if(vend&&String(r.v)!==String(vend))continue;
+    if(r.m.prev&&r.pv===undefined)semLista++;
+    const comPedido=new Set(r.sv.map(x=>x[0])),itens=[];
+    (r.pv||[]).filter(p=>!comPedido.has(p)).forEach(p=>itens.push({pdv:p,tipo:'nv',txt:'Não visitado'}));
+    const vis={};
+    for(const x of r.vis){const o=vis[x[0]]=vis[x[0]]||{reg:false,t:[]};if(x[4]||x[5]||x[7])o.reg=true;o.t.push(x[1]+(x[2]?'–'+x[2]:''))}
+    for(const [pdv,o] of Object.entries(vis))if(!o.reg)itens.push({pdv:+pdv,tipo:'sr',txt:'Visitado ('+o.t.join(', ')+') sem pedido e sem motivo'});
+    itens.sort((a,b)=>a.tipo.localeCompare(b.tipo)||String(cli(a.pdv)[0]).localeCompare(String(cli(b.pdv)[0])));
+    out.push({cod:r.v,nome:v.nome,sup:v.sup,prev:r.m.prev||0,itens});
+  }
+  out.sort((a,b)=>a.sup.localeCompare(b.sup)||a.cod-b.cod);
+  return {vend:out,semLista};
+}
+function justView(){
+  justOpcoes();
+  const d=S.jdia,hoje=D.gerado.slice(6,10)+'-'+D.gerado.slice(3,5)+'-'+D.gerado.slice(0,2);
+  const {vend,semLista}=justDados(d,S.jsup,S.jvend);
+  const quando=d===hoje?`até ${D.gerado.slice(11)}`:'dia fechado',meta=`${fdl(d)} · ${quando}`;
+  const filtro=[S.jsup?'Supervisor: '+supRot(S.jsup):'Todos os supervisores',S.jvend?'Vendedor: '+S.jvend+' · '+nomeBonito(curto((VEND[S.jvend]||{}).nome)):'Todos os vendedores'].join(' · ');
+  JUST={d,meta,filtro,vend,hoje:d===hoje};
+  const todos=vend.flatMap(v=>v.itens),nNv=todos.filter(i=>i.tipo==='nv').length,nSr=todos.length-nNv,nVend=vend.filter(v=>v.itens.length).length,prevT=vend.reduce((s,v)=>s+v.prev,0);
+  if(!vend.length){$('justbody').innerHTML='<p class="empty">Nenhum vendedor com rota ou movimento neste dia no período gerado.</p>';return}
+  const kp=[['Sem venda e sem justificativa',n0(todos.length),prevT?`${fp(todos.length/prevT*100)} dos ${n0(prevT)} previstos`:'clientes'],['Previstos não visitados',n0(nNv),'sem entrada no dia'],
+    ['Visitados sem registro',n0(nSr),'entrada sem pedido e sem motivo'],['Vendedores com pendência',n0(nVend),`de ${n0(vend.length)} vendedores`]]
+    .map(([l,v,e])=>`<div class="kpi"><span class="kl">${l}</span><b>${v}</b><em>${e}</em></div>`).join('');
+  const grupos={};vend.forEach(v=>(grupos[v.sup]=grupos[v.sup]||[]).push(v));
+  const corpo=Object.entries(grupos).map(([sup,vs])=>{const n=vs.reduce((s,v)=>s+v.itens.length,0);
+    return `<tr class="gh"><td class="l" colspan="5">${esc(supRot(sup))} · ${n0(n)} cliente${n===1?'':'s'}</td></tr>`+vs.filter(v=>v.itens.length).map(v=>
+      `<tr class="st"><td class="l" colspan="5">${v.cod} · ${esc(nomeBonito(v.nome))} · ${v.itens.length} de ${v.prev} previstos</td></tr>`+
+      v.itens.map(i=>{const c=cli(i.pdv);return `<tr><td class="l">${i.pdv}</td><td class="l">${esc(c[0]||'-')}</td><td class="l">${esc(c[3]||'-')}</td><td class="l">${esc(c[4]||'-')}</td><td class="l"><span class="tag ${i.tipo==='nv'?'no':'wa'}">${esc(i.txt)}</span></td></tr>`}).join('')).join('')+
+      (n===0?'<tr><td class="l" colspan="5" style="color:var(--ok)">Nenhuma pendência.</td></tr>':'')}).join('');
+  $('justbody').innerHTML=`<div class="pos"><div class="pstop"><b>Clientes sem venda e sem justificativa · ${meta}</b><br><span>${esc(filtro)}</span></div><div class="kpis4">${kp}</div>
+    ${semLista&&nNv===0?'<p class="nota" style="color:var(--wa)">Para este dia o painel não guarda a lista de previstos não visitados (só os últimos 14 dias): aparecem apenas os visitados sem registro.</p>':''}
+    <div class="tw"><table><thead><tr><th class="l">Cód.</th><th class="l">Cliente</th><th class="l">Razão social</th><th class="l">CNPJ</th><th class="l">Situação</th></tr></thead><tbody>${corpo}</tbody></table></div>
+    <p class="nota">Sem justificativa = cliente que não comprou no dia e não tem motivo de não venda registrado. Inclui clientes da rota do dia que não receberam visita e clientes visitados sem pedido e sem motivo. Cliente com pedido, ou com motivo registrado, não entra. ${meta}.</p></div>`;
+}
+$('jsup').onchange=e=>{S.jsup=e.target.value;S.jvend='';render()};
+$('jvend').onchange=e=>{S.jvend=e.target.value;render()};
+$('jdia').onchange=e=>{S.jdia=e.target.value||ult;render()};
+$('jimp').onclick=()=>print();
+/* ---------- visão Potenciais: consulta dos clientes em potencial por supervisor e vendedor ---------- */
+S.potsup='';S.potvend='';S.pottipo='';S.potq='';
+function potView(){
+  if(!POT){$('potbody').innerHTML='<p class="empty">Sem dados de potenciais. Rode o potenciais.py e depois o atualizar.bat.</p>';return}
+  const sups=[...new Set(Object.keys(POT.vend).map(c=>(VEND[c]||{}).sup).filter(Boolean))].sort(supOrd);
+  $('potsup').innerHTML='<option value="">Todos os supervisores</option>'+sups.map(s=>`<option value="${esc(s)}" ${S.potsup===s?'selected':''}>${esc(supRot(s))}</option>`).join('');
+  const vs=Object.keys(POT.vend).filter(c=>VEND[c]&&(!S.potsup||VEND[c].sup===S.potsup)).sort((a,b)=>a-b);
+  if(S.potvend&&!vs.includes(String(S.potvend)))S.potvend='';
+  $('potvend').innerHTML='<option value="">Todos os vendedores</option>'+vs.map(c=>`<option value="${c}" ${String(S.potvend)===c?'selected':''}>${c} · ${esc(nomeBonito(curto(VEND[c].nome)))}</option>`).join('');
+  $('pottipo').innerHTML='<option value="">Todos os tipos</option>'+Object.entries(POT.tipos).map(([k,n])=>`<option value="${k}" ${S.pottipo===k?'selected':''}>${esc(n)}</option>`).join('');
+  const q=S.potq.trim().toLowerCase();if($('potq').value!==S.potq)$('potq').value=S.potq;
+  const grupos={};let total=0;const unicos=new Set(),porTipo={};
+  vs.filter(c=>!S.potvend||c===String(S.potvend)).forEach(c=>{
+    const l=POT.vend[c].filter(i=>{const p=POT.pois[i];return (!S.pottipo||p.t===S.pottipo)&&(!q||(p.n||'').toLowerCase().includes(q))});
+    if(!l.length)return;
+    (grupos[VEND[c].sup]=grupos[VEND[c].sup]||[]).push([c,l]);total+=l.length;
+    l.forEach(i=>{if(!unicos.has(i)){unicos.add(i);const t=POT.pois[i].t;porTipo[t]=(porTipo[t]||0)+1}})});
+  const kp=[['Potenciais únicos',n0(unicos.size),'estabelecimentos no filtro'],...Object.entries(POT.tipos).map(([k,n])=>[n,n0(porTipo[k]||0),'únicos'])]
+    .map(([l,v,e])=>`<div class="kpi"><span class="kl">${esc(l)}</span><b>${v}</b><em>${e}</em></div>`).join('');
+  const aberto=!!S.potvend||Object.values(grupos).reduce((s,a)=>s+a.length,0)<=3;
+  const corpo=Object.entries(grupos).map(([sup,lst])=>{const n=lst.reduce((s,[c,l])=>s+l.length,0);
+    return `<h3 class="potsup">${esc(supRot(sup))} <small>${n0(n)} potencia${n===1?'l':'is'}</small></h3>`+lst.map(([c,l])=>{
+      const ps=l.map(i=>POT.pois[i]).sort((a,b)=>a.t.localeCompare(b.t)||(a.n||'~').localeCompare(b.n||'~'));
+      return `<details class="potv" ${aberto?'open':''}><summary><b>${c} · ${esc(nomeBonito(VEND[c].nome))}</b> <small>${n0(ps.length)} potenciais</small></summary>
+        <div class="tw"><table><thead><tr><th class="l">Tipo</th><th class="l">Estabelecimento</th><th>Latitude</th><th>Longitude</th><th></th></tr></thead><tbody>${
+        ps.map(p=>`<tr><td class="l">${esc(POT.tipos[p.t])}</td><td class="l">${esc(p.n||'(sem nome no mapa)')}</td><td>${p.lat}</td><td>${p.lon}</td><td><a href="https://www.google.com/maps?q=${p.lat},${p.lon}" target="_blank" rel="noopener">Abrir no mapa</a></td></tr>`).join('')}</tbody></table></div></details>`}).join('')}).join('');
+  $('potbody').innerHTML=`<div class="pos"><div class="kpis4">${kp}</div>${corpo||'<p class="empty">Nenhum potencial para o filtro.</p>'}
+    <p class="nota">Potencial = restaurante, lanchonete, padaria, mercado ou outro comércio de alimentos do OpenStreetMap (dados de ${esc(POT.gerado)}) que não está no cadastro de clientes (a menos de 50 m de um cliente conta como já cliente) e fica a até 1 km de um cliente da rota do vendedor. O mesmo local pode aparecer para mais de um vendedor da região (${n0(total)} linhas para ${n0(unicos.size)} locais únicos). O mapa é incompleto em cidades menores.</p></div>`;
+}
+$('potsup').onchange=e=>{S.potsup=e.target.value;S.potvend='';render()};
+$('potvend').onchange=e=>{S.potvend=e.target.value;render()};
+$('pottipo').onchange=e=>{S.pottipo=e.target.value;render()};
+$('potq').oninput=e=>{S.potq=e.target.value;clearTimeout(S._pq);S._pq=setTimeout(()=>{render();const i=$('potq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)};
+$('potexp').onclick=()=>exportaPotenciais(S.potsup,S.potvend,S.pottipo,S.potq.trim().toLowerCase());
+if(POT)$('btnpot').hidden=false;
+
+
+/* PDF em A4 paisagem: um arquivo com o filtro escolhido, ou um arquivo por supervisor */
+function pdfJust(vend,meta,filtro,nome){
+  const lib=window.jspdf;if(!lib){alert('Não consegui carregar o gerador de PDF (precisa de internet). Use o botão Imprimir.');return false}
+  const {jsPDF}=lib,doc=new jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
+  const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),M=28,CW=W-2*M;
+  doc.setFillColor(14,36,71);doc.roundedRect(M,24,CW,46,10,10,'F');
+  const img=document.querySelector('.logo img');let lx=M+12;
+  try{const iw=img.naturalWidth||3,ih=img.naturalHeight||1,hh=26,ww=hh*iw/ih;doc.setFillColor(255,255,255);doc.roundedRect(lx,33,ww+14,28,6,6,'F');doc.addImage(img.src,'PNG',lx+7,34,ww,hh);lx+=ww+30}catch(e){lx+=10}
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(16);doc.text('Monitoramento de vendedores',lx,52);
+  doc.setTextColor(19,35,61);doc.setFontSize(13);doc.text('Clientes sem venda e sem justificativa · '+meta,M,92);
+  doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(102,122,150);doc.text(filtro,M,106);
+  const todos=vend.flatMap(v=>v.itens),nNv=todos.filter(i=>i.tipo==='nv').length,prevT=vend.reduce((s,v)=>s+v.prev,0);
+  const kp=[['Sem venda e sem justificativa',String(todos.length),prevT?Math.round(todos.length/prevT*100)+'% dos '+prevT+' previstos':''],['Previstos não visitados',String(nNv),'sem entrada no dia'],
+    ['Visitados sem registro',String(todos.length-nNv),'entrada sem pedido e sem motivo'],['Vendedores com pendência',String(vend.filter(v=>v.itens.length).length),'de '+vend.length+' vendedores']];
+  const kw=(CW-30)/4;
+  kp.forEach(([l,v,e],i)=>{const x=M+i*(kw+10);doc.setFillColor(241,245,252);doc.setDrawColor(224,231,243);doc.roundedRect(x,118,kw,50,8,8,'FD');
+    doc.setFontSize(8.5);doc.setTextColor(102,122,150);doc.setFont('helvetica','bold');doc.text(l,x+10,132);doc.setFontSize(18);doc.setTextColor(19,35,61);doc.text(v,x+10,153);
+    doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(102,122,150);doc.text(e,x+10,163)});
+  const body=[],tipos=[];const grupos={};vend.forEach(v=>(grupos[v.sup]=grupos[v.sup]||[]).push(v));
+  Object.entries(grupos).forEach(([sup,vs])=>{
+    if(Object.keys(grupos).length>1){const n=vs.reduce((s,v)=>s+v.itens.length,0);
+      body.push([{content:supRot(sup)+' · '+n+' cliente'+(n===1?'':'s'),colSpan:5,styles:{fillColor:[225,238,252],textColor:[26,115,209],fontStyle:'bold'}}]);tipos.push('gh')}
+    vs.filter(v=>v.itens.length).forEach(v=>{
+      body.push([{content:v.cod+' · '+nomeBonito(v.nome)+' · '+v.itens.length+' de '+v.prev+' previstos',colSpan:5,styles:{fillColor:[241,245,252],fontStyle:'bold'}}]);tipos.push('st');
+      v.itens.forEach(i=>{const c=cli(i.pdv);body.push([String(i.pdv),c[0]||'-',c[3]||'-',c[4]||'-',i.txt]);tipos.push(i.tipo)})})});
+  if(!body.length)body.push([{content:'Nenhuma pendência neste filtro.',colSpan:5}]);
+  doc.autoTable({startY:180,margin:{top:28,left:M,right:M,bottom:34},theme:'plain',head:[['Cód.','Cliente','Razão social','CNPJ','Situação']],body,
+    styles:{font:'helvetica',fontSize:8.2,cellPadding:{top:3,bottom:3,left:5,right:5},textColor:[19,35,61],lineColor:[224,231,243],lineWidth:{bottom:.5},overflow:'linebreak',valign:'middle'},
+    headStyles:{fontStyle:'bold',textColor:[102,122,150],fontSize:8,lineWidth:{bottom:1},lineColor:[200,212,230]},
+    columnStyles:{0:{cellWidth:52},1:{cellWidth:150},2:{cellWidth:215},3:{cellWidth:92},4:{cellWidth:'auto'}},
+    didParseCell:h=>{if(h.section==='body'&&h.column.index===4&&tipos[h.row.index]==='nv')h.cell.styles.textColor=[213,31,54];if(h.section==='body'&&h.column.index===4&&tipos[h.row.index]==='sr')h.cell.styles.textColor=[160,105,0]},
+    didDrawPage:()=>{doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(140,152,172);doc.text(`Dados de ${D.gerado} · Página ${doc.internal.getNumberOfPages()}`,W-M,H-16,{align:'right'})}});
+  let y=doc.lastAutoTable.finalY+14;
+  const nota=doc.splitTextToSize('Sem justificativa = cliente que não comprou no dia e não tem motivo de não venda registrado. Inclui clientes da rota do dia que não receberam visita e clientes visitados sem pedido e sem motivo. Cliente com pedido, ou com motivo registrado, não entra.',CW);
+  if(y+nota.length*10>H-30){doc.addPage();y=40}
+  doc.setFontSize(7.5);doc.setTextColor(102,122,150);doc.text(nota,M,y);
+  doc.save(nome);return true;
+}
+$('jpdf').onclick=()=>{if(!JUST)return;pdfJust(JUST.vend,JUST.meta,JUST.filtro,'sem-justificativa_'+JUST.d+(S.jvend?'_'+S.jvend:S.jsup?'_'+supRot(S.jsup).toLowerCase().replace(/[^a-z0-9]+/g,'-'):'')+'.pdf')};
+$('jpdfs').onclick=()=>{if(!JUST)return;const g={};JUST.vend.forEach(v=>(g[v.sup]=g[v.sup]||[]).push(v));
+  Object.entries(g).forEach(([sup,vs],i)=>setTimeout(()=>pdfJust(vs,JUST.meta,'Supervisor: '+supRot(sup)+' · Todos os vendedores','sem-justificativa_'+JUST.d+'_'+nomeBonito(curto(sup)).toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.pdf'),i*700))};
+
+
+
+/* ---------- resumo da semana (calculado no gerar_painel.py, mesmas regras do PDF) ---------- */
+const SEM=D.semanas||[];
+const fr=v=>v==null?'—':Math.round(v*100)+'%', fd=v=>v.toFixed(1).replace('.',',');
+const DIA=D.dias||[];
+S.rmodo='semana';S.semi=0;S.diai=0;
+const resumoAtual=()=>{const dia=S.rmodo==='dia';return (dia?DIA:SEM)[dia?S.diai:S.semi]};
+function resumo(){
+  const dia=S.rmodo==='dia',L=dia?DIA:SEM,sel=$('rsem'),ix=dia?'diai':'semi';
+  document.querySelectorAll('#rmodo button').forEach(b=>b.classList.toggle('on',b.dataset.m===S.rmodo));
+  if(!L.length){sel.innerHTML='';$('rsbody').innerHTML=`<p class="empty">${dia?'Nenhum dia útil com dados no período gerado.':'Nenhuma semana completa (segunda a sexta) no período gerado. Rode o atualizar.bat com --dias 31 ou mais.'}</p>`;return}
+  if(S[ix]>=L.length)S[ix]=0;
+  sel.innerHTML=L.map((w,i)=>`<option value="${i}">${dia?fdl(w.inicio)+(w.parcial?' (em andamento)':''):'Semana de '+fdt(w.inicio)+' a '+fdt(w.fim)}</option>`).join('');
+  sel.value=S[ix];sel.title=dia?'Dia útil':'Semana (segunda a sexta)';
+  const w=L[S[ix]];
+  const kp=(dia?[['Positivações no dia',w.total],['Previstos na rota',w.prev],['Positivação da rota',fr(w.cob)],['Vendedores com alerta',w.alertas]]
+    :[['Média de positivações/dia',Math.round(w.media)],['Positivações na semana',w.total],['Dias com venda',w.dias_venda],['Vendedores com alerta',w.alertas]])
+    .map(([a,b])=>`<div class="kpi"><span>${a}</span><b>${b}</b></div>`).join('');
+  const cab=['<th class="l">Vendedor</th>',dia?'':'<th>Dias</th>','<th>Rota prevista</th><th>Visitados</th><th>Fora da rota</th><th>Positivados</th>',dia?'':'<th>Média/dia</th>','<th>Positivação da rota</th><th>Parou cedo</th><th>Sem entrada</th>'].join('');
+  const mesas=w.mesas.map(m=>`<div class="mesa"><h3>Mesa ${m.mesa} <small>Supervisor(a): ${esc(m.sup)}</small><span class="tot">${dia?Math.round(m.media)+' positivações':Math.round(m.media)+' positivações/dia'} · ${fr(m.cob)} da rota</span></h3>
+    <div class="tw"><table><thead><tr>${cab}</tr></thead><tbody>${
+    m.vend.map(v=>`<tr><td class="l nm${v.alerta?' al':''}">${v.cod} · ${esc(v.nome)}</td>${dia?'':`<td>${v.dias}</td>`}<td>${v.prev}</td><td>${v.vis}</td><td>${fr(v.fora_pct)}</td><td><b>${v.pos}</b></td>${dia?'':`<td>${fd(v.media)}</td>`}<td>${fr(v.cob)}</td><td>${v.cedo}</td><td>${v.sem_ck}</td></tr>`).join('')}</tbody></table></div>
+    <p class="sb">Pontos de atenção</p><ul>${m.pontos.map(([c,n,a])=>`<li><b>${esc(n)} – ${c}:</b> ${esc(a.join('; '))}.</li>`).join('')||'<li class="nada">Nenhum ponto de atenção pelas regras do relatório.</li>'}</ul>
+    <p class="sb">Destaques ${dia?'do dia':'da semana'}</p><ul class="ok">${m.destaques.map(([c,n,p])=>`<li>${esc(n)} (${c}): ${fr(p)} da rota positivada</li>`).join('')||'<li class="nada">Ninguém acima da média da mesa com rota suficiente.</li>'}</ul></div>`).join('');
+  const aviso=dia&&w.parcial?`<p class="nota" style="color:var(--wa)">Dia em andamento: os números são parciais (dados de ${esc(D.gerado)}) e "Parou cedo" não é avaliado.</p>`:'';
+  $('rsbody').innerHTML=`<div class="rs"><div class="kpis">${kp}</div>${aviso}${mesas}<p class="nota">Rascunho gerado pelas regras do monitoramento; os comentários sobre conversas com supervisores ficam por sua conta. Positivação da rota = clientes da rota com pedido ÷ clientes previstos${dia?'':' (dias úteis)'}. Parou cedo = última saída antes das 14:00. Sem entrada = ${dia?'pedido no dia e nenhuma visita':'dia com pedido e nenhuma visita'} no GPS. ${dia?'No resumo do dia os limites são menores: fora de rota a partir de 3 clientes e destaque a partir de 8 previstos. ':''}A rota é a do cadastro atual.</p></div>`;
+}
+function copiaResumo(){
+  const w=resumoAtual();if(!w)return;const b=$('rcopia'),ok=()=>{b.textContent='Copiado!';setTimeout(()=>b.textContent='Copiar texto',1800)};
+  const velho=()=>{const a=document.createElement('textarea');a.value=w.texto;document.body.appendChild(a);a.select();try{document.execCommand('copy');ok()}catch(_){}a.remove()};
+  navigator.clipboard?navigator.clipboard.writeText(w.texto).then(ok,velho):velho();
+}
+
+function render(){
+  topo();
+  if(S.vis==='resumo'){resumo();return}
+  if(S.vis==='pos'){posView();return}
+  if(S.vis==='just'){justView();return}
+  if(S.vis==='pot'){potView();return}
+  const regs=filtrados(),t=somar(regs),rows=porVendedor(regs);
+  if(S.sel!=null&&!rows.some(r=>r.cod===S.sel)){S.sel=null;S.dia=null}
+  kpis(t,rows.length);
+  if(S.vis==='mapa'){
+    lista(rows);roteiro(regs);desenhaMapa(regs);painelGraficos(regs,t,rows);
+    const selT=S.sel!=null?somar(regs.filter(r=>r.v===S.sel)):null;
+    motivos(selT||t,S.sel!=null?vnome(S.sel):(S.sup?supRot(S.sup):'todos'));
+  }else tabela(rows);
+}
+const sups=[...new Set(Object.values(VEND).map(v=>v.sup))].sort(supOrd);
+$('sup').innerHTML='<option value="">Todos os supervisores</option>'+sups.map(s=>`<option value="${esc(s)}">${esc(supRot(s))}</option>`).join('');
+$('de').min=$('ate').min=D.inicio;$('de').max=$('ate').max=D.fim;
+$('atalhos').onclick=e=>{const a=e.target.dataset.a;if(!a)return;S.ate=ult;
+  S.de=a==='dia'?ult:a==='7'?(datas.at(-7)||datas[0]):a==='mes'?ult.slice(0,8)+'01':D.inicio;if(a==='tudo')S.ate=D.fim;render()};
+$('de').onchange=e=>{S.de=e.target.value||ult;if(S.de>S.ate)S.ate=S.de;render()};
+$('ate').onchange=e=>{S.ate=e.target.value||ult;if(S.ate<S.de)S.de=S.ate;render()};
+function opcoesVend(){
+  const vs=Object.entries(VEND).filter(([c,v])=>!S.sup||v.sup===S.sup).sort((a,b)=>a[0]-b[0]);
+  if(S.vend&&!vs.some(([c])=>String(c)===String(S.vend)))S.vend='';
+  $('vend').innerHTML='<option value="">Todos os vendedores</option>'+vs.map(([c,v])=>`<option value="${c}">${c} · ${esc(nomeBonito(curto(v.nome)))}</option>`).join('');
+  $('vend').value=S.vend;
+}
+$('sup').onchange=e=>{S.sup=e.target.value;S.vend='';S.sel=null;S.dia=null;render()};
+$('vend').onchange=e=>{S.vend=e.target.value;S.sel=S.vend?+S.vend:null;S.dia=null;render()};
+$('q').oninput=e=>{S.q=e.target.value;render()};
+$('ord').onchange=e=>{S.ord=e.target.value;render()};
+$('vis').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.g){S.relAberto=!S.relAberto;$('grp').classList.toggle('open',S.relAberto);b.setAttribute('aria-expanded',S.relAberto);return}
+  const v=b.dataset.v;if(!v)return;if(!['resumo','pos','just','pot'].includes(v))S.relAberto=false;S.vis=v;try{localStorage.setItem('mv_vis',v)}catch(_){}render();if(v==='mapa'&&MAPA)setTimeout(()=>MAPA.invalidateSize(),50)};
+function aplicaTema(novo){
+  document.documentElement.setAttribute('data-theme',novo);try{localStorage.setItem('mv_tema',novo)}catch(_){}
+  if(MLG&&ESTILO_ORIG){try{MLG.getMaplibreMap().setStyle(pintaAzul(JSON.parse(ESTILO_ORIG),novo==='dark'))}catch(_){}}
+  if(M3&&ESTILO_ORIG){try{M3.setStyle(estilo3D(JSON.parse(ESTILO_ORIG),novo==='dark'));M3.once('idle',()=>render())}catch(_){}}
+  render();
+}
+$('temas').onclick=e=>{const b=e.target.closest('button[data-t]');if(b)aplicaTema(b.dataset.t)};
+addEventListener('scroll',()=>{const h=$('top'),y=scrollY;if(y>90)h.classList.add('compact');else if(y<30)h.classList.remove('compact')},{passive:true});
+$('tprev').onchange=e=>{S.prevmapa=e.target.checked;ULT_FIT='';render()};
+if(POT){$('tpotw').hidden=false;$('legpot').hidden=false}
+$('tpot').onchange=e=>{S.pot=e.target.checked;ULT_FIT='';M3FIT='';render()};
+$('rsem').onchange=e=>{S[S.rmodo==='dia'?'diai':'semi']=+e.target.value;render()};
+$('rmodo').onclick=e=>{const m=e.target.dataset.m;if(!m)return;S.rmodo=m;render()};
+$('rcopia').onclick=copiaResumo;
+$('rpdf').onclick=()=>print();
+$('lista').onclick=e=>{const c=e.target.closest('.vc');if(!c)return;const v=+c.dataset.v;S.sel=S.sel===v?null:v;S.dia=null;render()};
+/* clicar num cliente da lista: sobe até o mapa, vai até o pino e abre o popup */
+function abreNoMapa(it){
+  if(!MAPA)return;
+  document.querySelectorAll('#rot .on').forEach(x=>x.classList.remove('on'));it.classList.add('on');
+  let m=null;
+  if(it.dataset.i!=null){
+    m=MARC[+it.dataset.i];
+    if(!m){                                   // entrada sem coordenada: mostra o endereço do cadastro
+      const v=RECATUAL&&RECATUAL.vis[+it.dataset.i],c=v&&cli(v[0]);
+      if(c&&c[1]!=null){$('map').scrollIntoView({behavior:'smooth',block:'center'});MAPA.setView([c[1],c[2]],16);
+        L.popup().setLatLng([c[1],c[2]]).setContent(`<b>${esc(c[0]||'Cliente '+v[0])}</b><br>Entrada sem GPS: endereço do cadastro`).openOn(MAPA)}
+      return}
+  }else if(it.dataset.sv!=null)m=SVMARC[+it.dataset.sv];
+  else if(it.dataset.pv!=null)m=PVMARC[+it.dataset.pv];
+  if(!m)return;
+  $('map').scrollIntoView({behavior:'smooth',block:'center'});
+  MAPA.setView(m.getLatLng(),Math.max(MAPA.getZoom(),16));
+  setTimeout(()=>m.openPopup(),250);
+}
+$('rot').onclick=e=>{if(e.target.closest('#potcsv')){baixaPotCsv();return}const b=e.target.closest('.dias button');if(b){S.dia=b.dataset.d;render();return}
+  const pt=e.target.closest('.it[data-pt]');if(pt){const p=potDoVendedor(S.sel)[+pt.dataset.pt];if(p&&MAPA){$('map').scrollIntoView({behavior:'smooth',block:'center'});MAPA.setView([p.lat,p.lon],17)}return}
+  const it=e.target.closest('.it[data-i],.it[data-sv],.it[data-pv],.agora-box[data-i]');if(it)abreNoMapa(it)};
+$('tab').onclick=e=>{const th=e.target.closest('th');if(th){const c=th.dataset.c;S.tdir=S.tord===c?-S.tdir:(['nome','sup','iniM'].includes(c)?1:-1);S.tord=c;render();return}
+  const tr=e.target.closest('tr[data-v]');if(tr){S.sel=+tr.dataset.v;S.dia=null;S.vis='mapa';render();setTimeout(()=>MAPA&&MAPA.invalidateSize(),50);scrollTo({top:0,behavior:'smooth'})}};
+$('csv').onclick=()=>{
+  const rows=porVendedor(filtrados());
+  const cab=['Codigo','Vendedor','Supervisor','Dias','Previstos','Visitados','Pendentes','Fora da rota','Positivados','Na visita','Conversao %','Sem visita','Motivo c/ pedido','Relampago','Longe','Sem GPS','1a entrada','Ultima saida','Jornada min','Media visita min','Pedidos','Valor'];
+  const lin=rows.map(r=>[r.cod,r.nome,r.sup,r.dias,r.prev,r.cli,r.pend,r.fora,r.pos,r.posv,r.conv==null?'':r.conv.toFixed(1),r.semv,r.nvp,r.rel,r.longe,r.semgps,deMin(r.iniM),deMin(r.fimM),Math.round(r.jorM),Math.round(r.mediaVis),r.ped,r.val.toFixed(2).replace('.',',')]);
+  const txt='﻿'+[cab,...lin].map(l=>l.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(';')).join('\r\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/csv'}));a.download=`monitoramento_${S.de}_${S.ate}.csv`;a.click()};
+/* ---------- atualização automática ----------
+   Com o atualizar_loop.py rodando, o painel confere a cada 1 min se saiu versão nova. Se saiu, recarrega e volta
+   para o mesmo vendedor, dia, filtros, rolagem e zoom do mapa. Só funciona pelo localhost (não por file://). */
+let RESTAURA=null;
+try{const e=JSON.parse(sessionStorage.getItem('mv_estado')||'null');
+  if(e){sessionStorage.removeItem('mv_estado');Object.assign(S,e.S);RESTAURA=e}}catch(_){}
+function recarregaSePreciso(){
+  if(location.protocol==='file:')return;
+  fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(tx=>{
+    const m=tx.match(/"gerado":"([^"]+)"/);
+    if(m&&m[1]!==D.gerado){
+      try{sessionStorage.setItem('mv_estado',JSON.stringify({S,y:scrollY,mapa:MAPA?{c:MAPA.getCenter(),z:MAPA.getZoom()}:null}))}catch(_){}
+      location.reload()}}).catch(()=>{});
+}
+setInterval(recarregaSePreciso,60000);
+
+/* ---------- mapa 3D (MapLibre puro: prédios em 3D e câmera inclinada) ---------- */
+let M3=null,M3MARC=[],M3FIT='';
+function estilo3D(estilo,escuro){
+  const s=pintaAzul(estilo,escuro),i=s.layers.findIndex(l=>/building/.test(l.id)&&l.source&&l['source-layer']);
+  if(i>=0){const b=s.layers[i];
+    s.layers.splice(i+1,0,{id:'pred3d',type:'fill-extrusion',source:b.source,'source-layer':b['source-layer'],minzoom:13,
+      paint:{'fill-extrusion-color':escuro?'#264a78':'#bcd2ec','fill-extrusion-height':['coalesce',['get','render_height'],8],
+        'fill-extrusion-base':['coalesce',['get','render_min_height'],0],'fill-extrusion-opacity':.92}})}
+  return s;
+}
+function inicia3D(){
+  if(M3)return true;
+  if(typeof maplibregl==='undefined'||!ESTILO_ORIG){alert('O mapa 3D precisa de internet e do mapa já carregado.');return false}
+  M3=new maplibregl.Map({container:'map3d',style:estilo3D(JSON.parse(ESTILO_ORIG),document.documentElement.dataset.theme==='dark'),
+    center:[-47.9,-15.8],zoom:12,pitch:60,bearing:-17,maxPitch:75});
+  M3.addControl(new maplibregl.NavigationControl({visualizePitch:true}));
+  M3.on('click','pts3d',e=>{const f=e.features[0];if(!f)return;S.sel=+f.properties.v;S.dia=f.properties.d;render()});
+  M3.on('mouseenter','pts3d',()=>M3.getCanvas().style.cursor='pointer');M3.on('mouseleave','pts3d',()=>M3.getCanvas().style.cursor='');
+  M3.on('load',()=>render());
+  return true;
+}
+function desenha3D(regs,rec){
+  if(!M3)return;
+  if(!M3.isStyleLoaded()){M3.once('idle',()=>desenha3D(regs,rec));return}
+  M3MARC.forEach(m=>m.remove());M3MARC=[];
+  const pts=[],ll2=ll=>[ll[1],ll[0]];
+  const pin=(ll,cls,txt,html,semFit)=>{const d=document.createElement('div');d.className=cls;if(txt!=null)d.textContent=txt;
+    const m=new maplibregl.Marker({element:d,anchor:'center'}).setLngLat(ll2(ll));
+    if(html)m.setPopup(new maplibregl.Popup({offset:14}).setHTML(html));m.addTo(M3);M3MARC.push(m);if(!semFit)pts.push(ll2(ll))};
+  let linha=[],bolinhas=[];
+  if(rec){
+    rec.vis.forEach((v,i)=>{if(v[8]==null)return;const ll=[v[8],v[9]];linha.push(ll);
+      pin(ll,'pin '+st(v)+(v[6]>R.longe_m?' longe':''),i+1,popVisita(v,i+1).replace(/<br><button[\s\S]*?<\/button>/,''))});
+    const key=S.sel+'|'+S.dia;if(Array.isArray(ROTAS[key]))linha=ROTAS[key];
+    rec.sv.forEach(([pdv,n,val])=>{const c=cli(pdv);if(c[1]==null)return;
+      pin([c[1],c[2]],'pin sv','$',`<b>${esc(c[0])}</b><br>cód. ${pdv}<br><b>Pedido sem visita</b><br>${n} pedido${n>1?'s':''} · ${brl(val)}`)});
+    if(S.pot)potDoVendedor(S.sel).forEach(p=>pin([p.lat,p.lon],'pot3',null,`<b>${esc(p.n||'(sem nome)')}</b><br>${esc(POT.tipos[p.t])}<br>Potencial: ainda não é cliente`,true));
+    if(S.prevmapa&&rec.pv)rec.pv.forEach(pdv=>{const c=cli(pdv);if(c[1]==null)return;
+      pin([c[1],c[2]],'pvm',null,`<b>${esc(c[0]||'Cliente '+pdv)}</b><br>cód. ${pdv}<br><b>Previsto na rota, sem visita</b>`)});
+  }else{
+    const cores={ped:COR('--ok'),mcp:COR('--wa'),nv:COR('--no'),sr:COR('--gr')};
+    for(const r of regs)for(const v of r.vis){if(v[8]==null)continue;pts.push([v[9],v[8]]);
+      bolinhas.push({type:'Feature',properties:{v:r.v,d:r.d,c:cores[st(v)]},geometry:{type:'Point',coordinates:[v[9],v[8]]}})}
+  }
+  const fonte=(id,dado)=>{M3.getSource(id)?M3.getSource(id).setData(dado):M3.addSource(id,{type:'geojson',data:dado})};
+  fonte('rota3d',{type:'Feature',geometry:{type:'LineString',coordinates:linha.length>1?linha.map(ll2):[]}});
+  fonte('pts3d',{type:'FeatureCollection',features:bolinhas});
+  if(!M3.getLayer('rota3d-l'))M3.addLayer({id:'rota3d-l',type:'line',source:'rota3d',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':COR('--ac'),'line-width':4,'line-opacity':.9,'line-dasharray':[0.6,1.8]}});
+  if(!M3.getLayer('pts3d'))M3.addLayer({id:'pts3d',type:'circle',source:'pts3d',paint:{'circle-radius':5,'circle-color':['get','c'],'circle-stroke-color':'#fff','circle-stroke-width':1.2}});
+  M3.setPaintProperty('rota3d-l','line-color',COR('--ac'));
+  linha.forEach(ll=>pts.push(ll2(ll)));
+  const chave=[S.de,S.ate,S.sup,S.q,S.sel,S.dia].join('|');
+  if(chave!==M3FIT&&pts.length){const b=new maplibregl.LngLatBounds(pts[0],pts[0]);pts.forEach(x=>b.extend(x));
+    M3.fitBounds(b,{padding:70,maxZoom:17,pitch:60,duration:700});M3FIT=chave}
+}
+$('b3d').onclick=()=>{
+  S.m3=!S.m3;
+  if(S.m3&&!inicia3D()){S.m3=false;return}
+  document.querySelector('.mapwrap').classList.toggle('m3',S.m3);$('b3d').textContent=S.m3?'Mapa 2D':'Mapa 3D';
+  if(S.m3){M3.resize();M3FIT='';render()}else if(MAPA)setTimeout(()=>MAPA.invalidateSize(),50);
+};
+iniciaMapa();
+render();
+if(RESTAURA){
+  if(MAPA&&RESTAURA.mapa)MAPA.setView(RESTAURA.mapa.c,RESTAURA.mapa.z,{animate:false});
+  scrollTo(0,RESTAURA.y||0);
+}
+</script>
+</body>
+</html>
